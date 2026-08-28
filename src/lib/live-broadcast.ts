@@ -54,9 +54,10 @@ export function hostPeerId() {
 function peerConfig() {
   return {
     debug: 0 as const,
+    pingInterval: 4000,
     config: {
       iceServers: iceServers(),
-      iceTransportPolicy: "all" as RTCIceTransportPolicy,
+      iceCandidatePoolSize: 4,
       bundlePolicy: "max-bundle" as RTCBundlePolicy,
     },
   };
@@ -68,16 +69,12 @@ function bitrateForViewers(n: number) {
   return { maxBitrate: 320_000, maxFramerate: 20 };
 }
 
-function bindNetwork(onChange: () => void) {
-  window.addEventListener("online", onChange);
-  window.addEventListener("offline", onChange);
-  const conn = (navigator as Navigator & { connection?: EventTarget }).connection;
-  conn?.addEventListener("change", onChange);
-  return () => {
-    window.removeEventListener("online", onChange);
-    window.removeEventListener("offline", onChange);
-    conn?.removeEventListener("change", onChange);
+function bindNetwork(onOnline: () => void) {
+  const on = () => {
+    if (navigator.onLine) onOnline();
   };
+  window.addEventListener("online", on);
+  return () => window.removeEventListener("online", on);
 }
 
 type Guest = {
@@ -105,7 +102,7 @@ export class StreamerBroadcast {
   }
 
   async start() {
-    this.unbindNet = bindNetwork(() => this.scheduleReconnect());
+    this.unbindNet = bindNetwork(() => this.softReconnect());
     this.listen();
   }
 
@@ -140,7 +137,10 @@ export class StreamerBroadcast {
 
   private listen() {
     if (this.closed) return;
-    this.peer?.destroy();
+    if (this.peer && !this.peer.destroyed) {
+      this.softReconnect();
+      return;
+    }
     const peer = new Peer(hostPeerId(), peerConfig());
     this.peer = peer;
 
@@ -157,8 +157,7 @@ export class StreamerBroadcast {
       guest.call = call;
       this.guests.set(call.peer, guest);
       call.answer(this.stream);
-      call.on("close", () => this.drop(call.peer));
-      call.on("error", () => this.drop(call.peer));
+      call.on("close", () => this.dropCall(call.peer));
       void this.applyBitrate();
       this.emitStats();
     });
@@ -168,13 +167,13 @@ export class StreamerBroadcast {
         return;
       }
       this.attachData(conn);
+      if (this.guests.get(conn.peer)?.call) return;
       try {
         const call = peer.call(conn.peer, this.stream);
         const guest = this.guests.get(conn.peer) ?? { report: "guest" };
         guest.call = call;
         this.guests.set(conn.peer, guest);
-        call.on("close", () => this.drop(conn.peer));
-        call.on("error", () => this.drop(conn.peer));
+        call.on("close", () => this.dropCall(conn.peer));
         void this.applyBitrate();
         this.emitStats();
       } catch {
@@ -183,18 +182,44 @@ export class StreamerBroadcast {
     });
     peer.on("error", (err) => {
       const type = (err as { type?: string }).type;
-      if (type === "unavailable-id" || type === "network" || type === "server-error") {
-        this.scheduleReconnect();
+      if (type === "unavailable-id") {
+        this.scheduleRebuild(5000);
+        return;
+      }
+      if (type === "network" || type === "server-error" || type === "socket-error") {
+        this.softReconnect();
       }
     });
     peer.on("disconnected", () => {
       if (this.closed) return;
+      this.softReconnect();
+    });
+  }
+
+  private softReconnect() {
+    if (this.closed) return;
+    const peer = this.peer;
+    if (peer && !peer.destroyed && peer.disconnected) {
       try {
         peer.reconnect();
       } catch {
-        this.scheduleReconnect();
+        this.scheduleRebuild(2000);
       }
-    });
+    }
+  }
+
+  private scheduleRebuild(delay: number) {
+    if (this.closed) return;
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = setTimeout(() => {
+      try {
+        this.peer?.destroy();
+      } catch {
+        // ignore
+      }
+      this.peer = null;
+      this.listen();
+    }, delay);
   }
 
   private attachData(conn: DataConnection) {
@@ -208,24 +233,22 @@ export class StreamerBroadcast {
         this.emitStats();
       }
     });
-    conn.on("close", () => this.drop(conn.peer));
+    conn.on("close", () => {
+      const g = this.guests.get(conn.peer);
+      if (g) g.data = undefined;
+    });
     this.emitStats();
   }
 
-  private drop(id: string) {
+  private dropCall(id: string) {
     const g = this.guests.get(id);
     if (!g) return;
-    g.call?.close();
-    g.data?.close();
-    this.guests.delete(id);
-    this.emitStats();
-    void this.applyBitrate();
-  }
-
-  private scheduleReconnect() {
-    if (this.closed) return;
-    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
-    this.reconnectTimer = setTimeout(() => this.listen(), 1200);
+    g.call = undefined;
+    if (!g.data) {
+      this.guests.delete(id);
+      this.emitStats();
+      void this.applyBitrate();
+    }
   }
 
   private emitStats() {
@@ -270,6 +293,8 @@ export class ViewerSession {
   private readonly onStream: (stream: MediaStream | null) => void;
   private readonly onStatus: (status: "waiting" | "live" | "reconnecting") => void;
 
+  private backoffMs = 1500;
+
   constructor(
     onStream: (stream: MediaStream | null) => void,
     onStatus: (status: "waiting" | "live" | "reconnecting") => void,
@@ -288,7 +313,17 @@ export class ViewerSession {
   }
 
   async start() {
-    this.unbindNet = bindNetwork(() => this.scheduleReconnect());
+    this.unbindNet = bindNetwork(() => {
+      if (this.call?.peerConnection?.connectionState === "connected") {
+        try {
+          this.peer?.reconnect();
+        } catch {
+          // keep the picture
+        }
+        return;
+      }
+      this.scheduleReconnect();
+    });
     this.connect();
   }
 
@@ -302,6 +337,7 @@ export class ViewerSession {
 
   private connect() {
     if (this.closed) return;
+    if (this.call?.peerConnection?.connectionState === "connected") return;
     this.teardown();
     this.onStatus(this.everLive ? "reconnecting" : "waiting");
     const peer = new Peer(peerConfig());
@@ -320,7 +356,6 @@ export class ViewerSession {
           }
         }
       });
-      data.on("close", () => this.scheduleReconnect());
     });
     peer.on("call", (call) => {
       if (this.closed) return;
@@ -329,10 +364,12 @@ export class ViewerSession {
       call.on("stream", (stream) => {
         if (this.closed) return;
         this.everLive = true;
+        this.backoffMs = 1500;
         this.onStream(stream);
         this.onStatus("live");
       });
       call.on("close", () => {
+        if (this.closed) return;
         this.onStream(null);
         this.scheduleReconnect();
       });
@@ -344,16 +381,21 @@ export class ViewerSession {
         this.scheduleReconnect();
         return;
       }
+      if (this.call?.peerConnection?.connectionState === "connected") return;
       this.scheduleReconnect();
     });
     peer.on("disconnected", () => {
       if (this.closed) return;
-      this.onStatus("reconnecting");
-      try {
-        peer.reconnect();
-      } catch {
-        this.scheduleReconnect();
+      if (this.call?.peerConnection?.connectionState === "connected") {
+        try {
+          peer.reconnect();
+        } catch {
+          // keep picture
+        }
+        return;
       }
+      this.onStatus("reconnecting");
+      this.scheduleReconnect();
     });
   }
 
@@ -361,7 +403,9 @@ export class ViewerSession {
     if (this.closed) return;
     this.onStatus(this.everLive ? "reconnecting" : "waiting");
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
-    this.reconnectTimer = setTimeout(() => this.connect(), 1600);
+    const wait = this.backoffMs;
+    this.backoffMs = Math.min(8000, Math.round(this.backoffMs * 1.4));
+    this.reconnectTimer = setTimeout(() => this.connect(), wait);
   }
 
   private teardown() {
@@ -387,9 +431,9 @@ export async function openCamera(facing: "environment" | "user") {
     },
     video: {
       facingMode: { ideal: facing },
-      width: { ideal: 1280 },
-      height: { ideal: 720 },
-      frameRate: { ideal: 30, max: 30 },
+      width: { ideal: 960, max: 1280 },
+      height: { ideal: 540, max: 720 },
+      frameRate: { ideal: 24, max: 24 },
     },
   });
   for (const track of stream.getVideoTracks()) {

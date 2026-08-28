@@ -92,9 +92,11 @@ export function GoLive() {
     window.addEventListener("beforeunload", onLeave);
     document.addEventListener("visibilitychange", onVis);
     void keepAwake();
+    const pulse = window.setInterval(() => void keepAwake(), 20000);
     return () => {
       window.removeEventListener("beforeunload", onLeave);
       document.removeEventListener("visibilitychange", onVis);
+      window.clearInterval(pulse);
     };
   }, [live]);
 
