@@ -1,0 +1,8 @@
+node_modules
+.vercel
+.grok/preview.log
+.grok/preview.pid
+.grok/status
+screenshots
+artifacts
+.DS_Store
