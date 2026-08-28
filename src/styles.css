@@ -3,7 +3,6 @@
 @theme {
   --font-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Cormorant Garamond", Georgia, "Times New Roman", serif;
-
   --color-bg: #f6f1ea;
   --color-surface: #fffdf9;
   --color-raised: #efe8de;
@@ -16,7 +15,6 @@
   --color-live: #4f6b48;
   --color-live-fg: #f6f1ea;
   --color-warn: #9a5b32;
-
   --radius-sm: 0.5rem;
   --radius-md: 0.75rem;
   --radius-lg: 1.25rem;
@@ -24,63 +22,17 @@
 }
 
 @layer base {
-  html {
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
-
-  html,
-  body,
-  #root {
+  html { -webkit-font-smoothing: antialiased; }
+  html, body, #root {
     min-height: 100%;
     background: var(--color-bg);
     color: var(--color-fg);
   }
-
-  body {
-    font-family: var(--font-sans);
-    line-height: 1.5;
-  }
-
-  h1,
-  h2,
-  h3 {
-    text-wrap: balance;
-    font-family: var(--font-serif);
-  }
-
-  p {
-    text-wrap: pretty;
-  }
-
-  button:not(:disabled),
-  [role="button"]:not(:disabled) {
-    cursor: pointer;
-  }
-
-  .wait-dot {
-    animation: wait-pulse 2.4s ease-in-out infinite;
-  }
-
+  body { font-family: var(--font-sans); line-height: 1.5; }
+  h1, h2, h3 { font-family: var(--font-serif); }
+  .wait-dot { animation: wait-pulse 2.4s ease-in-out infinite; }
   @keyframes wait-pulse {
-    0%,
-    100% {
-      opacity: 0.35;
-      transform: scale(1);
-    }
-    50% {
-      opacity: 1;
-      transform: scale(1.35);
-    }
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+    0%, 100% { opacity: 0.35; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.35); }
   }
 }
