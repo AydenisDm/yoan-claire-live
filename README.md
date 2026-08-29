@@ -1,8 +1,6 @@
-# Vows Live
+# Eventstream
 
-Private wedding watch page for **Yoan & Claire** (29 August 2026).
-
-The streamer taps **Go live** on `/host`. Relatives open the homepage and only watch. The picture is not posted to YouTube — it stays between this site and the people with the link.
+Private live event watch page. The streamer taps **Go live** on `/host`. Guests open the homepage and only watch. The picture stays on this site.
 
 The filming phone publishes **once** into LiveKit Cloud. Guests subscribe from the SFU. This website stays on Vercel.
 
@@ -29,6 +27,8 @@ Add these on the Vercel project (server only — not `VITE_`):
 - `LIVEKIT_API_KEY`
 - `LIVEKIT_API_SECRET`
 - Optional: `HOST_PASSWORD` — overrides the client host gate if you want a secret that is not in the page
+
+Optional labels: `VITE_EVENT_NAME`, `VITE_EVENT_DATE`, `VITE_KICKER`.
 
 ## Optional backup
 

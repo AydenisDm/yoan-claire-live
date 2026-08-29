@@ -1,11 +1,15 @@
 import {
+  AudioPresets,
   ConnectionState,
   Room,
   RoomEvent,
   Track,
+  VideoPresets,
+  VideoQuality,
   type LocalTrackPublication,
   type RemoteParticipant,
   type RemoteTrack,
+  type RemoteTrackPublication,
 } from "livekit-client";
 import { HOST_IDENTITY, HOST_PW_KEY, guestIdentity } from "@/lib/live-config";
 
@@ -13,6 +17,19 @@ export type LiveStats = {
   watching: number;
   ok: number;
   trouble: number;
+};
+
+const hostPublishDefaults = {
+  videoCodec: "h264" as const,
+  simulcast: true,
+  videoEncoding: {
+    maxBitrate: 4_500_000,
+    maxFramerate: 30,
+    priority: "high" as const,
+  },
+  videoSimulcastLayers: [VideoPresets.h360, VideoPresets.h720],
+  degradationPreference: "maintain-resolution" as const,
+  audioPreset: AudioPresets.musicHighQuality,
 };
 
 export class LiveConfigError extends Error {
@@ -25,11 +42,16 @@ export class LiveConfigError extends Error {
 
 type TokenResponse = { token: string; url: string; identity: string; room: string };
 
+function isHostParticipant(participant: {
+  identity: string;
+  permissions?: { canPublish?: boolean } | null;
+}) {
+  return participant.identity === HOST_IDENTITY || Boolean(participant.permissions?.canPublish);
+}
+
 async function fetchLiveToken(role: "host" | "guest", password?: string): Promise<TokenResponse> {
   const payload =
-    role === "guest"
-      ? { role, identity: guestIdentity() }
-      : { role, password };
+    role === "guest" ? { role, identity: guestIdentity() } : { role, password };
   const res = await fetch("/api/live", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -58,28 +80,34 @@ export async function openCamera(facing: "environment" | "user") {
     {
       audio: {
         echoCancellation: true,
-        noiseSuppression: false,
+        noiseSuppression: true,
         autoGainControl: true,
         channelCount: 1,
       },
       video: {
         facingMode: { ideal: facing },
-        width: { ideal: 1280, max: 1920 },
-        height: { ideal: 720, max: 1080 },
-        frameRate: { ideal: 24, max: 30 },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+        frameRate: { ideal: 30, max: 30 },
       },
     },
     {
       audio: true,
-      video: { facingMode: facing },
+      video: {
+        facingMode: { ideal: facing },
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+        frameRate: { ideal: 30 },
+      },
     },
+    { audio: true, video: { facingMode: facing } },
     { audio: true, video: true },
   ];
   let last: unknown;
   for (const constraints of attempts) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      for (const track of stream.getVideoTracks()) track.contentHint = "motion";
+      for (const track of stream.getVideoTracks()) track.contentHint = "detail";
       for (const track of stream.getAudioTracks()) track.contentHint = "speech";
       return stream;
     } catch (err) {
@@ -87,6 +115,12 @@ export async function openCamera(facing: "environment" | "user") {
     }
   }
   throw last instanceof Error ? last : new Error("camera");
+}
+
+export function cameraHasTorch(stream: MediaStream) {
+  const track = stream.getVideoTracks()[0];
+  const caps = track?.getCapabilities?.() as (MediaTrackCapabilities & { torch?: boolean }) | undefined;
+  return Boolean(caps && "torch" in caps);
 }
 
 export async function toggleTorch(stream: MediaStream, on: boolean) {
@@ -99,6 +133,24 @@ export async function toggleTorch(stream: MediaStream, on: boolean) {
     return true;
   } catch {
     return false;
+  }
+}
+
+export async function copyWatchLink() {
+  const url = `${window.location.origin}/`;
+  try {
+    await navigator.clipboard.writeText(url);
+    return "copied" as const;
+  } catch {
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title: "Watch live", url });
+        return "shared" as const;
+      } catch {
+        return "failed" as const;
+      }
+    }
+    return "failed" as const;
   }
 }
 
@@ -125,11 +177,13 @@ export class StreamerBroadcast {
     if (this.closed) return;
 
     const room = new Room({
-      adaptiveStream: true,
+      adaptiveStream: false,
       dynacast: true,
       disconnectOnPageLeave: false,
+      publishDefaults: hostPublishDefaults,
       videoCaptureDefaults: {
         facingMode: "environment",
+        resolution: VideoPresets.h1080.resolution,
       },
     });
     this.room = room;
@@ -188,6 +242,7 @@ export class StreamerBroadcast {
       return;
     }
     await room.localParticipant.publishTrack(track, {
+      ...hostPublishDefaults,
       source,
       name: kind === "video" ? "camera" : "mic",
       simulcast: kind === "video",
@@ -201,16 +256,16 @@ export class StreamerBroadcast {
     const audio = stream.getAudioTracks()[0];
     if (video) {
       await room.localParticipant.publishTrack(video, {
+        ...hostPublishDefaults,
         source: Track.Source.Camera,
         name: "camera",
-        simulcast: true,
-        videoEncoding: { maxBitrate: 1_800_000, maxFramerate: 24 },
       });
     }
     if (audio) {
       await room.localParticipant.publishTrack(audio, {
         source: Track.Source.Microphone,
         name: "mic",
+        audioPreset: AudioPresets.musicHighQuality,
       });
     }
   }
@@ -276,21 +331,26 @@ export class ViewerSession {
       const creds = await fetchLiveToken("guest");
       if (this.closed) return;
       const room = new Room({
-        adaptiveStream: true,
+        adaptiveStream: false,
         dynacast: true,
+        disconnectOnPageLeave: false,
       });
       this.room = room;
 
-      room.on(RoomEvent.TrackSubscribed, (track, _pub, participant) => {
-        if (this.closed) return;
-        if (participant.identity !== HOST_IDENTITY && !participant.permissions?.canPublish) return;
-        this.attachRemote(track);
-      });
+      room.on(
+        RoomEvent.TrackSubscribed,
+        (track, pub: RemoteTrackPublication, participant) => {
+          if (this.closed) return;
+          if (!isHostParticipant(participant)) return;
+          if (pub.kind === Track.Kind.Video) pub.setVideoQuality(VideoQuality.HIGH);
+          this.attachRemote(track);
+        },
+      );
       room.on(RoomEvent.TrackUnsubscribed, (track) => {
         this.detachRemote(track);
       });
       room.on(RoomEvent.ParticipantDisconnected, (p: RemoteParticipant) => {
-        if (p.identity === HOST_IDENTITY) {
+        if (isHostParticipant(p)) {
           this.videoTrack = null;
           this.audioTrack = null;
           this.emitStream();
@@ -357,8 +417,9 @@ export class ViewerSession {
     const room = this.room;
     if (!room) return;
     for (const participant of room.remoteParticipants.values()) {
-      if (participant.identity !== HOST_IDENTITY) continue;
+      if (!isHostParticipant(participant)) continue;
       for (const pub of participant.trackPublications.values()) {
+        if (pub.kind === Track.Kind.Video) pub.setVideoQuality(VideoQuality.HIGH);
         if (pub.track) this.attachRemote(pub.track);
       }
     }

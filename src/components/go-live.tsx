@@ -11,6 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   LiveConfigError,
+  cameraHasTorch,
+  copyWatchLink,
   openCamera,
   StreamerBroadcast,
   hostPasswordFromSession,
@@ -53,6 +55,7 @@ export function GoLive() {
   const [stats, setStats] = useState<LiveStats>({ watching: 0, ok: 0, trouble: 0 });
   const [error, setError] = useState<string | null>(null);
   const [torch, setTorch] = useState(false);
+  const [torchOn, setTorchOn] = useState(false);
   const [chromeOn, setChromeOn] = useState(true);
   const [copied, setCopied] = useState(false);
 
@@ -68,6 +71,7 @@ export function GoLive() {
     runtime.broadcast.setOnViewers(setStats);
     attach(runtime.stream);
     setFacing(runtime.facing);
+    setTorch(cameraHasTorch(runtime.stream));
     setLive(true);
   }, []);
 
@@ -76,12 +80,8 @@ export function GoLive() {
   }, [live]);
 
   useEffect(() => {
-    const hide = () => {
-      if (!live) return;
-      setChromeOn(false);
-    };
     if (!live || !chromeOn) return;
-    const t = window.setTimeout(hide, 4000);
+    const t = window.setTimeout(() => setChromeOn(false), 8000);
     return () => window.clearTimeout(t);
   }, [live, chromeOn]);
 
@@ -113,6 +113,7 @@ export function GoLive() {
     setLive(false);
     setStats({ watching: 0, ok: 0, trouble: 0 });
     setTorch(false);
+    setTorchOn(false);
     setChromeOn(true);
   };
 
@@ -127,6 +128,7 @@ export function GoLive() {
       runtime = { broadcast: session, stream, facing };
       await session.start();
       await keepAwake();
+      setTorch(cameraHasTorch(stream));
       setLive(true);
       setChromeOn(true);
     } catch (err) {
@@ -138,39 +140,58 @@ export function GoLive() {
   };
 
   const flip = async () => {
+    if (!runtime) return;
+    const previous = facing;
     const next = facing === "environment" ? "user" : "environment";
+    setError(null);
+    runtime.stream.getTracks().forEach((t) => t.stop());
     try {
       const stream = await openCamera(next);
-      runtime?.stream.getTracks().forEach((t) => t.stop());
       attach(stream);
+      runtime.stream = stream;
+      runtime.facing = next;
       setFacing(next);
-      setTorch(false);
-      if (runtime) {
-        runtime.stream = stream;
-        runtime.facing = next;
-        await runtime.broadcast.replaceStream(stream);
-      }
+      setTorchOn(false);
+      setTorch(cameraHasTorch(stream));
+      await runtime.broadcast.replaceStream(stream);
     } catch {
-      setError("Could not switch camera.");
+      try {
+        const stream = await openCamera(previous);
+        attach(stream);
+        runtime.stream = stream;
+        runtime.facing = previous;
+        setFacing(previous);
+        setTorch(cameraHasTorch(stream));
+        await runtime.broadcast.replaceStream(stream);
+        setError("Could not switch camera.");
+      } catch {
+        setError("Could not switch camera. Stop, then Go live again.");
+      }
     }
   };
 
   const onTorch = async () => {
     if (!runtime) return;
-    const next = !torch;
+    const next = !torchOn;
     const ok = await toggleTorch(runtime.stream, next);
-    if (ok) setTorch(next);
-    else setError("Torch is not available on this camera.");
+    if (ok) {
+      setTorchOn(next);
+      setError(null);
+    } else {
+      setTorch(false);
+      setError("Light is not available on this camera.");
+    }
   };
 
-  const copyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.origin + "/");
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1600);
-    } catch {
-      setCopied(false);
+  const shareLink = async () => {
+    const result = await copyWatchLink();
+    if (result === "failed") {
+      setError("Could not copy the watch link. Share the site address instead.");
+      return;
     }
+    setCopied(true);
+    setError(null);
+    window.setTimeout(() => setCopied(false), 1600);
   };
 
   const preview = (
@@ -187,43 +208,62 @@ export function GoLive() {
     return (
       <div className="fixed inset-0 z-50 bg-fg" onClick={() => setChromeOn(true)}>
         <div className="absolute inset-0">{preview}</div>
+        <div className="pointer-events-none absolute top-4 right-4 z-20 pt-[env(safe-area-inset-top)]">
+          <Button
+            type="button"
+            variant="secondary"
+            className="pointer-events-auto"
+            onClick={(e) => {
+              e.stopPropagation();
+              stopAll();
+            }}
+          >
+            <Square />
+            Stop
+          </Button>
+        </div>
         <div
           className={cn(
             "absolute inset-0 flex flex-col justify-between p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))] transition-opacity duration-200",
             chromeOn ? "opacity-100" : "pointer-events-none opacity-0",
           )}
         >
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start justify-between gap-3 pr-24">
             <Badge tone="live">
               <span className="size-1.5 rounded-full bg-live" />
               Live
             </Badge>
-            <p className="max-w-[70%] rounded-full bg-fg/55 px-3 py-1.5 text-right text-sm font-medium text-accent-fg tabular-nums">
+            <p className="max-w-[70%] rounded-full bg-fg/70 px-3 py-1.5 text-right text-sm font-medium text-accent-fg tabular-nums">
               {stats.watching} watching
-              {stats.ok ? ` · ${stats.ok} can see & hear` : ""}
+              {stats.ok ? ` · ${stats.ok} clear` : ""}
               {stats.trouble ? ` · ${stats.trouble} trouble` : ""}
             </p>
           </div>
-          <div
-            className="flex flex-wrap items-center justify-center gap-2"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Button type="button" variant="secondary" onClick={stopAll}>
-              <Square />
-              Stop
-            </Button>
-            <Button type="button" variant="secondary" onClick={() => void flip()}>
-              <FlipHorizontal2 />
-              Flip
-            </Button>
-            <Button type="button" variant="secondary" onClick={() => void onTorch()}>
-              {torch ? <FlashlightOff /> : <Flashlight />}
-              {torch ? "Light off" : "Light"}
-            </Button>
-            <Button type="button" variant="secondary" onClick={() => void copyLink()}>
-              <Copy />
-              {copied ? "Copied" : "Copy link"}
-            </Button>
+          <div className="space-y-3">
+            {error ? (
+              <p className="rounded-md bg-fg/70 px-3 py-2 text-center text-sm text-warn">
+                {error}
+              </p>
+            ) : null}
+            <div
+              className="flex flex-wrap items-center justify-center gap-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Button type="button" variant="secondary" onClick={() => void flip()}>
+                <FlipHorizontal2 />
+                Flip
+              </Button>
+              {torch ? (
+                <Button type="button" variant="secondary" onClick={() => void onTorch()}>
+                  {torchOn ? <FlashlightOff /> : <Flashlight />}
+                  {torchOn ? "Light off" : "Light"}
+                </Button>
+              ) : null}
+              <Button type="button" variant="secondary" onClick={() => void shareLink()}>
+                <Copy />
+                {copied ? "Copied" : "Copy link"}
+              </Button>
+            </div>
           </div>
         </div>
       </div>

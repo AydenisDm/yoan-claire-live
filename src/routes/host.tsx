@@ -5,7 +5,7 @@ import { GoLive } from "@/components/go-live";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { eventConfig } from "@/lib/event-config";
-import { rememberHostPassword } from "@/lib/live-broadcast";
+import { copyWatchLink, rememberHostPassword } from "@/lib/live-broadcast";
 import { HOST_GATE_KEY, HOST_PW_KEY } from "@/lib/live-config";
 
 export const Route = createFileRoute("/host")({ ssr: false, component: HostPage });
@@ -51,11 +51,9 @@ function HostPage() {
     return (
       <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-start px-5 pt-16 pb-12 sm:justify-center sm:pt-12">
         <p className="mb-2 text-center text-xs tracking-[0.28em] text-subtle uppercase">
-          Streamer only
+          {eventConfig.productName}
         </p>
-        <h1 className="mb-6 text-center font-serif text-4xl text-fg">
-          Go live for {eventConfig.coupleNames}
-        </h1>
+        <h1 className="mb-6 text-center font-serif text-4xl text-fg">Streamer console</h1>
         <form onSubmit={(e) => void unlock(e)} className="space-y-3">
           <Input
             type="password"
@@ -75,7 +73,7 @@ function HostPage() {
         </p>
         <p className="mt-4 text-center">
           <Link to="/" className="text-sm text-muted underline-offset-4 hover:underline">
-            Back to the ceremony
+            Back to the watch page
           </Link>
         </p>
       </main>
@@ -87,6 +85,7 @@ function HostPage() {
 
 function HostConsole() {
   const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState(false);
   const [configured, setConfigured] = useState<boolean | null>(null);
   const watchUrl = typeof window === "undefined" ? "/" : `${window.location.origin}/`;
 
@@ -106,22 +105,28 @@ function HostConsole() {
   }, []);
 
   const copyWatch = async () => {
-    try {
-      await navigator.clipboard.writeText(watchUrl);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch {
+    const result = await copyWatchLink();
+    if (result === "failed") {
+      setCopyError(true);
       setCopied(false);
+      return;
     }
+    setCopyError(false);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 2000);
   };
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-3xl flex-col gap-8 px-4 py-8 pb-24 sm:px-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-xs tracking-[0.28em] text-subtle uppercase">Streamer controls</p>
-          <h1 className="font-serif text-3xl text-fg sm:text-4xl">{eventConfig.coupleNames}</h1>
-          <p className="mt-1 text-sm text-muted">{eventConfig.eventDate}</p>
+          <p className="text-xs tracking-[0.28em] text-subtle uppercase">{eventConfig.productName}</p>
+          <h1 className="font-serif text-3xl text-fg sm:text-4xl">{eventConfig.eventName}</h1>
+          {eventConfig.eventDate ? (
+            <p className="mt-1 text-sm text-muted">{eventConfig.eventDate}</p>
+          ) : (
+            <p className="mt-1 text-sm text-muted">Streamer controls</p>
+          )}
         </div>
         <Link to="/" className="text-sm text-muted underline-offset-4 hover:underline">
           Preview guest view
@@ -139,7 +144,7 @@ function HostConsole() {
       <section className="rounded-xl border border-border bg-surface p-4 sm:p-5">
         <h2 className="font-serif text-xl text-fg">Guest watch link</h2>
         <p className="mt-1 text-sm text-muted">
-          Send this. Relatives only watch. The live picture stays on this site — not posted
+          Send this. Guests only watch. The live picture stays on this site — it is not posted
           publicly.
         </p>
         <div className="mt-4 flex flex-col gap-2 sm:flex-row">
@@ -149,6 +154,9 @@ function HostConsole() {
             {copied ? "Copied" : "Copy link"}
           </Button>
         </div>
+        {copyError ? (
+          <p className="mt-2 text-sm text-warn">Copy failed. Select the link and share it yourself.</p>
+        ) : null}
       </section>
 
       <section className="space-y-3">

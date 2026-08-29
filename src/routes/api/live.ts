@@ -84,7 +84,7 @@ async function handlePost(request: Request) {
 
   const at = new AccessToken(env.apiKey, env.apiSecret, {
     identity,
-    name: role === "host" ? "Ceremony" : "Guest",
+    name: role === "host" ? "Host" : "Guest",
     ttl: "12h",
   });
   at.addGrant({

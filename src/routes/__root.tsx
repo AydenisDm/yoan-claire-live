@@ -9,12 +9,17 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
-      { title: `${eventConfig.coupleNames} — live` },
+      {
+        title:
+          eventConfig.eventName === eventConfig.productName
+            ? eventConfig.productName
+            : `${eventConfig.eventName} — ${eventConfig.productName}`,
+      },
       {
         name: "description",
-        content: `Watch ${eventConfig.coupleNames} live. No account needed.`,
+        content: `Watch ${eventConfig.eventName} live on ${eventConfig.productName}. No account needed.`,
       },
-      { name: "theme-color", content: "#f6f1ea" },
+      { name: "theme-color", content: "#0e0f12" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
     ],
     links: [
@@ -26,7 +31,7 @@ export const Route = createRootRoute({
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Figtree:wght@400;500;600&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Syne:wght@500;600;700&display=swap",
       },
     ],
   }),

@@ -2,19 +2,19 @@
 
 @theme {
   --font-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
-  --font-serif: "Cormorant Garamond", Georgia, "Times New Roman", serif;
-  --color-bg: #f6f1ea;
-  --color-surface: #fffdf9;
-  --color-raised: #efe8de;
-  --color-fg: #2a241f;
-  --color-muted: #6b6258;
-  --color-subtle: #8f857b;
-  --color-border: #e0d6c8;
-  --color-accent: #2a241f;
-  --color-accent-fg: #f6f1ea;
-  --color-live: #4f6b48;
-  --color-live-fg: #f6f1ea;
-  --color-warn: #9a5b32;
+  --font-serif: "Syne", ui-sans-serif, system-ui, sans-serif;
+  --color-bg: #0e0f12;
+  --color-surface: #17181d;
+  --color-raised: #22242b;
+  --color-fg: #eef0f4;
+  --color-muted: #9aa0ab;
+  --color-subtle: #6d7380;
+  --color-border: #2e313a;
+  --color-accent: #e8e4dc;
+  --color-accent-fg: #121318;
+  --color-live: #ef4444;
+  --color-live-fg: #fff7f7;
+  --color-warn: #e0a15a;
   --radius-sm: 0.5rem;
   --radius-md: 0.75rem;
   --radius-lg: 1.25rem;

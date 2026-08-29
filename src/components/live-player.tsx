@@ -199,7 +199,7 @@ function WebRtcViewer() {
         <div className="mt-4 rounded-xl border border-border bg-surface p-4 text-center">
           <p className="font-serif text-lg text-fg">Can you see and hear clearly?</p>
           <p className="mt-1 text-sm text-muted">
-            This tells the person filming — they cannot hear you back.
+            This tells the streamer — they cannot hear you back.
           </p>
           <div className="mt-3 flex flex-wrap justify-center gap-2">
             <Button type="button" onClick={() => sendReport("ok")}>
@@ -266,7 +266,7 @@ function YouTubePlayer({ videoId }: { videoId: string }) {
       <div ref={wrapRef} className="aspect-video w-full bg-raised">
         <iframe
           ref={iframeRef}
-          title="Wedding livestream"
+          title="Live stream"
           src={src}
           className="h-full w-full border-0"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
