@@ -4,6 +4,8 @@ Private wedding watch page for **Yoan & Claire** (29 August 2026).
 
 The streamer taps **Go live** on `/host`. Relatives open the homepage and only watch. The picture is not posted to YouTube — it stays between this site and the people with the link.
 
+The filming phone publishes **once** into LiveKit Cloud. Guests subscribe from the SFU. This website stays on Vercel.
+
 ## Two links
 
 | Who | Where | What they do |
@@ -19,7 +21,14 @@ The streamer taps **Go live** on `/host`. Relatives open the homepage and only w
 4. Tap **Go live**. Allow camera and mic. Keep that tab open.
 5. If it drops, tap Go live again. Guests stay on the same link.
 
-A family-sized audience works well. A very large guest list can strain the filming phone’s upload.
+## Server settings (LiveKit Cloud)
+
+Add these on the Vercel project (server only — not `VITE_`):
+
+- `LIVEKIT_URL` — `wss://your-project.livekit.cloud`
+- `LIVEKIT_API_KEY`
+- `LIVEKIT_API_SECRET`
+- Optional: `HOST_PASSWORD` — overrides the client host gate if you want a secret that is not in the page
 
 ## Optional backup
 

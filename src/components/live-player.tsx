@@ -8,11 +8,16 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { WaitingRoom } from "@/components/waiting-room";
-import { ViewerSession } from "@/lib/live-broadcast";
 import { type Playback } from "@/lib/playback";
 import { cn } from "@/lib/utils";
 
 type Status = "waiting" | "live" | "reconnecting";
+
+type ViewerHandle = {
+  start: () => Promise<void>;
+  stop: () => void;
+  setReport: (value: "ok" | "bad") => void;
+};
 
 export function LivePlayer({ playback }: { playback: Playback }) {
   if (playback.kind === "youtube") {
@@ -109,25 +114,30 @@ function PlayerShell({
 function WebRtcViewer() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
-  const sessionRef = useRef<ViewerSession | null>(null);
+  const sessionRef = useRef<ViewerHandle | null>(null);
   const [status, setStatus] = useState<Status>("waiting");
   const [muted, setMuted] = useState(true);
   const [report, setReport] = useState<"ok" | "bad" | null>(null);
 
   useEffect(() => {
-    const session = new ViewerSession(
-      (stream) => {
-        const video = videoRef.current;
-        if (!video) return;
-        video.srcObject = stream;
-        if (stream) void video.play().catch(() => undefined);
-      },
-      (next) => setStatus(next),
-    );
-    sessionRef.current = session;
-    void session.start();
+    let cancelled = false;
+    void import("@/lib/live-broadcast").then(({ ViewerSession }) => {
+      if (cancelled) return;
+      const session = new ViewerSession(
+        (stream) => {
+          const video = videoRef.current;
+          if (!video) return;
+          video.srcObject = stream;
+          if (stream) void video.play().catch(() => undefined);
+        },
+        (next) => setStatus(next),
+      );
+      sessionRef.current = session;
+      void session.start();
+    });
     return () => {
-      session.stop();
+      cancelled = true;
+      sessionRef.current?.stop();
       sessionRef.current = null;
     };
   }, []);

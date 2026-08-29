@@ -36,7 +36,7 @@ export function parsePlayback(raw: string): Playback {
   if (!url) return { kind: "none" };
   const yt = extractYouTubeId(url);
   if (yt) return { kind: "youtube", videoId: yt };
-  if (/\.m3u8(\?|$)/i.test(url) || /mux\.com|cloudflarestream\.com|livekit/i.test(url) || /^https?:\/\//i.test(url)) {
+  if (/\.m3u8(\?|$)/i.test(url) || /mux\.com|cloudflarestream\.com/i.test(url)) {
     return { kind: "hls", src: url };
   }
   return { kind: "none" };

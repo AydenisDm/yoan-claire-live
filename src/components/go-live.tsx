@@ -10,8 +10,10 @@ import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  LiveConfigError,
   openCamera,
   StreamerBroadcast,
+  hostPasswordFromSession,
   toggleTorch,
   type LiveStats,
 } from "@/lib/live-broadcast";
@@ -34,18 +36,22 @@ async function keepAwake() {
   }
 }
 
+function errorCopy(err: unknown) {
+  if (err instanceof LiveConfigError && err.code === "not_configured") {
+    return "The live room is not connected on the server yet. Add LiveKit Cloud keys, then try again.";
+  }
+  if (err instanceof LiveConfigError && err.code === "unauthorized") {
+    return "Host password did not match. Unlock Streamer again, then Go live.";
+  }
+  return "Allow camera and microphone, then try Go live again.";
+}
+
 export function GoLive() {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [facing, setFacing] = useState<"environment" | "user">(
-    runtime?.facing ?? "environment",
-  );
+  const [facing, setFacing] = useState<"environment" | "user">(runtime?.facing ?? "environment");
   const [live, setLive] = useState(() => Boolean(runtime));
   const [busy, setBusy] = useState(false);
-  const [stats, setStats] = useState<LiveStats>({
-    watching: 0,
-    ok: 0,
-    trouble: 0,
-  });
+  const [stats, setStats] = useState<LiveStats>({ watching: 0, ok: 0, trouble: 0 });
   const [error, setError] = useState<string | null>(null);
   const [torch, setTorch] = useState(false);
   const [chromeOn, setChromeOn] = useState(true);
@@ -115,17 +121,18 @@ export function GoLive() {
     setBusy(true);
     setError(null);
     try {
+      const password = hostPasswordFromSession();
       const stream = await openCamera(facing);
       attach(stream);
-      const session = new StreamerBroadcast(stream, setStats);
+      const session = new StreamerBroadcast(stream, setStats, password);
       runtime = { broadcast: session, stream, facing };
       await session.start();
       await keepAwake();
       setLive(true);
       setChromeOn(true);
-    } catch {
+    } catch (err) {
       stopAll();
-      setError("Allow camera and microphone, then try Go live again.");
+      setError(errorCopy(err));
     } finally {
       setBusy(false);
     }
@@ -170,10 +177,7 @@ export function GoLive() {
   const preview = (
     <video
       ref={videoRef}
-      className={cn(
-        "h-full w-full object-cover",
-        facing === "user" && "scale-x-[-1]",
-      )}
+      className={cn("h-full w-full object-cover", facing === "user" && "scale-x-[-1]")}
       playsInline
       muted
       autoPlay
@@ -182,10 +186,7 @@ export function GoLive() {
 
   if (live) {
     return (
-      <div
-        className="fixed inset-0 z-50 bg-fg"
-        onClick={() => setChromeOn(true)}
-      >
+      <div className="fixed inset-0 z-50 bg-fg" onClick={() => setChromeOn(true)}>
         <div className="absolute inset-0">{preview}</div>
         <div
           className={cn(
@@ -237,8 +238,8 @@ export function GoLive() {
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-bg/75 px-6 text-center">
           <p className="font-serif text-2xl text-fg">Ready when you are</p>
           <p className="max-w-sm text-sm text-muted">
-            Go live fills this phone’s screen. Guests only watch the link.
-            Keep the phone plugged in and this page open.
+            Go live fills this phone’s screen. Guests only watch the link. Keep the phone
+            plugged in and this page open.
           </p>
         </div>
       </div>

@@ -1,8 +1,13 @@
-import Peer, { type DataConnection, type MediaConnection } from "peerjs";
-import { eventConfig } from "@/lib/event-config";
-
-export const STREAMER_ID = "streamer";
-export const MAX_VIEWERS = 50;
+import {
+  ConnectionState,
+  Room,
+  RoomEvent,
+  Track,
+  type LocalTrackPublication,
+  type RemoteParticipant,
+  type RemoteTrack,
+} from "livekit-client";
+import { HOST_IDENTITY, HOST_PW_KEY, guestIdentity } from "@/lib/live-config";
 
 export type LiveStats = {
   watching: number;
@@ -10,416 +15,40 @@ export type LiveStats = {
   trouble: number;
 };
 
-export function iceServers(): RTCIceServer[] {
-  return [
-    {
-      urls: [
-        "stun:stun.l.google.com:19302",
-        "stun:stun1.l.google.com:19302",
-        "stun:stun.cloudflare.com:3478",
-      ],
-    },
-    {
-      urls: [
-        "turn:openrelay.metered.ca:80",
-        "turn:openrelay.metered.ca:80?transport=tcp",
-        "turn:openrelay.metered.ca:443",
-        "turn:openrelay.metered.ca:443?transport=tcp",
-        "turns:openrelay.metered.ca:443?transport=tcp",
-      ],
-      username: "openrelayproject",
-      credential: "openrelayproject",
-    },
-    {
-      urls: [
-        "turn:staticauth.openrelay.metered.ca:80",
-        "turn:staticauth.openrelay.metered.ca:80?transport=tcp",
-        "turn:staticauth.openrelay.metered.ca:443?transport=tcp",
-        "turns:staticauth.openrelay.metered.ca:443?transport=tcp",
-      ],
-      username: "openrelayproject",
-      credential: "openrelayprojectsecret",
-    },
-  ];
-}
-
-export function hostPeerId() {
-  const slug = `${eventConfig.coupleNames}${eventConfig.roomId}`
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, "")
-    .slice(0, 16);
-  return `vows${slug}`;
-}
-
-function peerConfig() {
-  return {
-    debug: 0 as const,
-    pingInterval: 4000,
-    config: {
-      iceServers: iceServers(),
-      iceCandidatePoolSize: 4,
-      bundlePolicy: "max-bundle" as RTCBundlePolicy,
-    },
-  };
-}
-
-function bitrateForViewers(n: number) {
-  if (n <= 8) return { maxBitrate: 1_200_000, maxFramerate: 30 };
-  if (n <= 20) return { maxBitrate: 650_000, maxFramerate: 24 };
-  return { maxBitrate: 320_000, maxFramerate: 20 };
-}
-
-function bindNetwork(onOnline: () => void) {
-  const on = () => {
-    if (navigator.onLine) onOnline();
-  };
-  window.addEventListener("online", on);
-  return () => window.removeEventListener("online", on);
-}
-
-type Guest = {
-  call?: MediaConnection;
-  data?: DataConnection;
-  report: "guest" | "ok" | "bad";
-};
-
-export class StreamerBroadcast {
-  private closed = false;
-  private peer: Peer | null = null;
-  private unbindNet: (() => void) | null = null;
-  private readonly guests = new Map<string, Guest>();
-  private stream: MediaStream;
-  private onStats: (stats: LiveStats) => void;
-  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-
-  constructor(stream: MediaStream, onStats: (stats: LiveStats) => void) {
-    this.stream = stream;
-    this.onStats = onStats;
-  }
-
-  setOnViewers(fn: (stats: LiveStats) => void) {
-    this.onStats = fn;
-  }
-
-  async start() {
-    this.unbindNet = bindNetwork(() => this.softReconnect());
-    this.listen();
-  }
-
-  stop() {
-    this.closed = true;
-    this.unbindNet?.();
-    this.unbindNet = null;
-    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
-    for (const g of this.guests.values()) {
-      g.call?.close();
-      g.data?.close();
-    }
-    this.guests.clear();
-    this.peer?.destroy();
-    this.peer = null;
-    this.emitStats();
-  }
-
-  async replaceStream(next: MediaStream) {
-    this.stream = next;
-    const tracks = next.getTracks();
-    for (const g of this.guests.values()) {
-      const pc = g.call?.peerConnection;
-      if (!pc) continue;
-      for (const sender of pc.getSenders()) {
-        const match = tracks.find((t) => t.kind === sender.track?.kind);
-        if (match) await sender.replaceTrack(match);
-      }
-    }
-    await this.applyBitrate();
-  }
-
-  private listen() {
-    if (this.closed) return;
-    if (this.peer && !this.peer.destroyed) {
-      this.softReconnect();
-      return;
-    }
-    const peer = new Peer(hostPeerId(), peerConfig());
-    this.peer = peer;
-
-    peer.on("open", () => {
-      if (this.closed) return;
-      this.emitStats();
-    });
-    peer.on("call", (call) => {
-      if (this.closed || this.guests.size >= MAX_VIEWERS) {
-        call.close();
-        return;
-      }
-      const guest = this.guests.get(call.peer) ?? { report: "guest" };
-      guest.call = call;
-      this.guests.set(call.peer, guest);
-      call.answer(this.stream);
-      call.on("close", () => this.dropCall(call.peer));
-      void this.applyBitrate();
-      this.emitStats();
-    });
-    peer.on("connection", (conn) => {
-      if (this.closed) {
-        conn.close();
-        return;
-      }
-      this.attachData(conn);
-      if (this.guests.get(conn.peer)?.call) return;
-      try {
-        const call = peer.call(conn.peer, this.stream);
-        const guest = this.guests.get(conn.peer) ?? { report: "guest" };
-        guest.call = call;
-        this.guests.set(conn.peer, guest);
-        call.on("close", () => this.dropCall(conn.peer));
-        void this.applyBitrate();
-        this.emitStats();
-      } catch {
-        // viewer will retry
-      }
-    });
-    peer.on("error", (err) => {
-      const type = (err as { type?: string }).type;
-      if (type === "unavailable-id") {
-        this.scheduleRebuild(5000);
-        return;
-      }
-      if (type === "network" || type === "server-error" || type === "socket-error") {
-        this.softReconnect();
-      }
-    });
-    peer.on("disconnected", () => {
-      if (this.closed) return;
-      this.softReconnect();
-    });
-  }
-
-  private softReconnect() {
-    if (this.closed) return;
-    const peer = this.peer;
-    if (peer && !peer.destroyed && peer.disconnected) {
-      try {
-        peer.reconnect();
-      } catch {
-        this.scheduleRebuild(2000);
-      }
-    }
-  }
-
-  private scheduleRebuild(delay: number) {
-    if (this.closed) return;
-    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
-    this.reconnectTimer = setTimeout(() => {
-      try {
-        this.peer?.destroy();
-      } catch {
-        // ignore
-      }
-      this.peer = null;
-      this.listen();
-    }, delay);
-  }
-
-  private attachData(conn: DataConnection) {
-    const guest = this.guests.get(conn.peer) ?? { report: "guest" };
-    guest.data = conn;
-    this.guests.set(conn.peer, guest);
-    conn.on("data", (raw) => {
-      const msg = raw as { t?: string; v?: string };
-      if (msg?.t === "report" && (msg.v === "ok" || msg.v === "bad")) {
-        guest.report = msg.v;
-        this.emitStats();
-      }
-    });
-    conn.on("close", () => {
-      const g = this.guests.get(conn.peer);
-      if (g) g.data = undefined;
-    });
-    this.emitStats();
-  }
-
-  private dropCall(id: string) {
-    const g = this.guests.get(id);
-    if (!g) return;
-    g.call = undefined;
-    if (!g.data) {
-      this.guests.delete(id);
-      this.emitStats();
-      void this.applyBitrate();
-    }
-  }
-
-  private emitStats() {
-    const list = [...this.guests.values()];
-    this.onStats({
-      watching: list.filter((g) => g.call).length,
-      ok: list.filter((g) => g.report === "ok").length,
-      trouble: list.filter((g) => g.report === "bad").length,
-    });
-  }
-
-  private async applyBitrate() {
-    const { maxBitrate, maxFramerate } = bitrateForViewers(this.guests.size);
-    for (const g of this.guests.values()) {
-      const pc = g.call?.peerConnection;
-      if (!pc) continue;
-      for (const sender of pc.getSenders()) {
-        if (sender.track?.kind !== "video") continue;
-        try {
-          const params = sender.getParameters();
-          if (!params.encodings?.length) params.encodings = [{}];
-          params.encodings[0].maxBitrate = maxBitrate;
-          params.encodings[0].maxFramerate = maxFramerate;
-          await sender.setParameters(params);
-        } catch {
-          // ignore
-        }
-      }
-    }
+export class LiveConfigError extends Error {
+  code: "not_configured" | "unauthorized" | "failed";
+  constructor(code: "not_configured" | "unauthorized" | "failed", message: string) {
+    super(message);
+    this.code = code;
   }
 }
 
-export class ViewerSession {
-  private closed = false;
-  private peer: Peer | null = null;
-  private call: MediaConnection | null = null;
-  private data: DataConnection | null = null;
-  private report: "ok" | "bad" | null = null;
-  private unbindNet: (() => void) | null = null;
-  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  private everLive = false;
-  private readonly onStream: (stream: MediaStream | null) => void;
-  private readonly onStatus: (status: "waiting" | "live" | "reconnecting") => void;
+type TokenResponse = { token: string; url: string; identity: string; room: string };
 
-  private backoffMs = 1500;
-
-  constructor(
-    onStream: (stream: MediaStream | null) => void,
-    onStatus: (status: "waiting" | "live" | "reconnecting") => void,
-  ) {
-    this.onStream = onStream;
-    this.onStatus = onStatus;
+async function fetchLiveToken(role: "host" | "guest", password?: string): Promise<TokenResponse> {
+  const identity = role === "guest" ? guestIdentity() : HOST_IDENTITY;
+  const res = await fetch("/api/live", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ role, password, identity }),
+  });
+  let body: { error?: string } & Partial<TokenResponse> = {};
+  try {
+    body = (await res.json()) as typeof body;
+  } catch {
+    body = {};
   }
-
-  setReport(value: "ok" | "bad") {
-    this.report = value;
-    try {
-      this.data?.send({ t: "report", v: value });
-    } catch {
-      // next reconnect
-    }
+  if (body.error === "not_configured" || res.status === 503) {
+    throw new LiveConfigError("not_configured", "Live room is not configured yet.");
   }
-
-  async start() {
-    this.unbindNet = bindNetwork(() => {
-      if (this.call?.peerConnection?.connectionState === "connected") {
-        try {
-          this.peer?.reconnect();
-        } catch {
-          // keep the picture
-        }
-        return;
-      }
-      this.scheduleReconnect();
-    });
-    this.connect();
+  if (res.status === 401 || body.error === "unauthorized") {
+    throw new LiveConfigError("unauthorized", "Host password did not match.");
   }
-
-  stop() {
-    this.closed = true;
-    this.unbindNet?.();
-    this.unbindNet = null;
-    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
-    this.teardown();
+  if (!res.ok || !body.token || !body.url) {
+    throw new LiveConfigError("failed", "Could not join the live room.");
   }
-
-  private connect() {
-    if (this.closed) return;
-    if (this.call?.peerConnection?.connectionState === "connected") return;
-    this.teardown();
-    this.onStatus(this.everLive ? "reconnecting" : "waiting");
-    const peer = new Peer(peerConfig());
-    this.peer = peer;
-
-    peer.on("open", () => {
-      if (this.closed || this.peer !== peer) return;
-      const data = peer.connect(hostPeerId(), { reliable: true });
-      this.data = data;
-      data.on("open", () => {
-        if (this.report) {
-          try {
-            data.send({ t: "report", v: this.report });
-          } catch {
-            // ignore
-          }
-        }
-      });
-    });
-    peer.on("call", (call) => {
-      if (this.closed) return;
-      this.call = call;
-      call.answer();
-      call.on("stream", (stream) => {
-        if (this.closed) return;
-        this.everLive = true;
-        this.backoffMs = 1500;
-        this.onStream(stream);
-        this.onStatus("live");
-      });
-      call.on("close", () => {
-        if (this.closed) return;
-        this.onStream(null);
-        this.scheduleReconnect();
-      });
-    });
-    peer.on("error", (err) => {
-      const type = (err as { type?: string }).type;
-      if (type === "peer-unavailable") {
-        this.onStatus(this.everLive ? "reconnecting" : "waiting");
-        this.scheduleReconnect();
-        return;
-      }
-      if (this.call?.peerConnection?.connectionState === "connected") return;
-      this.scheduleReconnect();
-    });
-    peer.on("disconnected", () => {
-      if (this.closed) return;
-      if (this.call?.peerConnection?.connectionState === "connected") {
-        try {
-          peer.reconnect();
-        } catch {
-          // keep picture
-        }
-        return;
-      }
-      this.onStatus("reconnecting");
-      this.scheduleReconnect();
-    });
-  }
-
-  private scheduleReconnect() {
-    if (this.closed) return;
-    this.onStatus(this.everLive ? "reconnecting" : "waiting");
-    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
-    const wait = this.backoffMs;
-    this.backoffMs = Math.min(8000, Math.round(this.backoffMs * 1.4));
-    this.reconnectTimer = setTimeout(() => this.connect(), wait);
-  }
-
-  private teardown() {
-    this.call?.close();
-    this.call = null;
-    this.data?.close();
-    this.data = null;
-    this.peer?.destroy();
-    this.peer = null;
-    this.onStream(null);
-  }
+  return body as TokenResponse;
 }
-
-
 
 export async function openCamera(facing: "environment" | "user") {
   const stream = await navigator.mediaDevices.getUserMedia({
@@ -431,17 +60,13 @@ export async function openCamera(facing: "environment" | "user") {
     },
     video: {
       facingMode: { ideal: facing },
-      width: { ideal: 960, max: 1280 },
-      height: { ideal: 540, max: 720 },
-      frameRate: { ideal: 24, max: 24 },
+      width: { ideal: 1280, max: 1920 },
+      height: { ideal: 720, max: 1080 },
+      frameRate: { ideal: 24, max: 30 },
     },
   });
-  for (const track of stream.getVideoTracks()) {
-    track.contentHint = "motion";
-  }
-  for (const track of stream.getAudioTracks()) {
-    track.contentHint = "speech";
-  }
+  for (const track of stream.getVideoTracks()) track.contentHint = "motion";
+  for (const track of stream.getAudioTracks()) track.contentHint = "speech";
   return stream;
 }
 
@@ -456,4 +81,285 @@ export async function toggleTorch(stream: MediaStream, on: boolean) {
   } catch {
     return false;
   }
+}
+
+export class StreamerBroadcast {
+  private closed = false;
+  private room: Room | null = null;
+  private stream: MediaStream;
+  private onStats: (stats: LiveStats) => void;
+  private readonly reports = new Map<string, "ok" | "bad">();
+  private readonly password: string;
+
+  constructor(stream: MediaStream, onStats: (stats: LiveStats) => void, password: string) {
+    this.stream = stream;
+    this.onStats = onStats;
+    this.password = password;
+  }
+
+  setOnViewers(fn: (stats: LiveStats) => void) {
+    this.onStats = fn;
+  }
+
+  async start() {
+    const creds = await fetchLiveToken("host", this.password);
+    if (this.closed) return;
+
+    const room = new Room({
+      adaptiveStream: true,
+      dynacast: true,
+      disconnectOnPageLeave: false,
+      videoCaptureDefaults: {
+        facingMode: "environment",
+      },
+    });
+    this.room = room;
+
+    room.on(RoomEvent.ParticipantConnected, () => this.emitStats());
+    room.on(RoomEvent.ParticipantDisconnected, (p) => {
+      this.reports.delete(p.identity);
+      this.emitStats();
+    });
+    room.on(RoomEvent.DataReceived, (payload, participant) => {
+      try {
+        const msg = JSON.parse(new TextDecoder().decode(payload)) as { t?: string; v?: string };
+        if (msg?.t === "report" && (msg.v === "ok" || msg.v === "bad") && participant) {
+          this.reports.set(participant.identity, msg.v);
+          this.emitStats();
+        }
+      } catch {
+        // ignore
+      }
+    });
+    room.on(RoomEvent.Disconnected, () => {
+      if (!this.closed) this.emitStats();
+    });
+
+    await room.connect(creds.url, creds.token);
+    if (this.closed) {
+      await room.disconnect();
+      return;
+    }
+    await this.publish(this.stream);
+    this.emitStats();
+  }
+
+  stop() {
+    this.closed = true;
+    void this.room?.disconnect();
+    this.room = null;
+    this.reports.clear();
+    this.emitStats();
+  }
+
+  async replaceStream(next: MediaStream) {
+    this.stream = next;
+    if (!this.room || this.room.state !== ConnectionState.Connected) return;
+    await this.swapTrack("video", next.getVideoTracks()[0]);
+    await this.swapTrack("audio", next.getAudioTracks()[0]);
+  }
+
+  private async swapTrack(kind: "video" | "audio", track?: MediaStreamTrack) {
+    const room = this.room;
+    if (!room || !track) return;
+    const source = kind === "video" ? Track.Source.Camera : Track.Source.Microphone;
+    const pub = room.localParticipant.getTrackPublication(source) as LocalTrackPublication | undefined;
+    if (pub?.track) {
+      await pub.track.replaceTrack(track);
+      return;
+    }
+    await room.localParticipant.publishTrack(track, {
+      source,
+      name: kind === "video" ? "camera" : "mic",
+      simulcast: kind === "video",
+    });
+  }
+
+  private async publish(stream: MediaStream) {
+    const room = this.room;
+    if (!room) return;
+    const video = stream.getVideoTracks()[0];
+    const audio = stream.getAudioTracks()[0];
+    if (video) {
+      await room.localParticipant.publishTrack(video, {
+        source: Track.Source.Camera,
+        name: "camera",
+        simulcast: true,
+        videoEncoding: { maxBitrate: 1_800_000, maxFramerate: 24 },
+      });
+    }
+    if (audio) {
+      await room.localParticipant.publishTrack(audio, {
+        source: Track.Source.Microphone,
+        name: "mic",
+      });
+    }
+  }
+
+  private emitStats() {
+    const watching = this.room
+      ? [...this.room.remoteParticipants.values()].filter((p) => p.identity !== HOST_IDENTITY)
+          .length
+      : 0;
+    const ok = [...this.reports.values()].filter((v) => v === "ok").length;
+    const trouble = [...this.reports.values()].filter((v) => v === "bad").length;
+    this.onStats({ watching, ok, trouble });
+  }
+}
+
+export class ViewerSession {
+  private closed = false;
+  private room: Room | null = null;
+  private videoTrack: MediaStreamTrack | null = null;
+  private audioTrack: MediaStreamTrack | null = null;
+  private report: "ok" | "bad" | null = null;
+  private everLive = false;
+  private readonly onStream: (stream: MediaStream | null) => void;
+  private readonly onStatus: (status: "waiting" | "live" | "reconnecting") => void;
+
+  constructor(
+    onStream: (stream: MediaStream | null) => void,
+    onStatus: (status: "waiting" | "live" | "reconnecting") => void,
+  ) {
+    this.onStream = onStream;
+    this.onStatus = onStatus;
+  }
+
+  setReport(value: "ok" | "bad") {
+    this.report = value;
+    void this.sendReport();
+  }
+
+  async start() {
+    this.onStatus("waiting");
+    try {
+      const creds = await fetchLiveToken("guest");
+      if (this.closed) return;
+      const room = new Room({
+        adaptiveStream: true,
+        dynacast: true,
+      });
+      this.room = room;
+
+      room.on(RoomEvent.TrackSubscribed, (track, _pub, participant) => {
+        if (this.closed) return;
+        if (participant.identity !== HOST_IDENTITY && !participant.permissions?.canPublish) return;
+        this.attachRemote(track);
+      });
+      room.on(RoomEvent.TrackUnsubscribed, (track) => {
+        this.detachRemote(track);
+      });
+      room.on(RoomEvent.ParticipantDisconnected, (p: RemoteParticipant) => {
+        if (p.identity === HOST_IDENTITY) {
+          this.videoTrack = null;
+          this.audioTrack = null;
+          this.emitStream();
+          this.onStatus(this.everLive ? "reconnecting" : "waiting");
+        }
+      });
+      room.on(RoomEvent.Reconnecting, () => {
+        if (!this.closed) this.onStatus(this.everLive ? "reconnecting" : "waiting");
+      });
+      room.on(RoomEvent.Reconnected, () => {
+        if (!this.closed && this.videoTrack) {
+          this.onStatus("live");
+          this.emitStream();
+        }
+      });
+      room.on(RoomEvent.Disconnected, () => {
+        if (this.closed) return;
+        this.videoTrack = null;
+        this.audioTrack = null;
+        this.emitStream();
+        this.onStatus(this.everLive ? "reconnecting" : "waiting");
+      });
+
+      await room.connect(creds.url, creds.token);
+      if (this.closed) {
+        await room.disconnect();
+        return;
+      }
+      this.hydrateExisting();
+      await this.sendReport();
+    } catch (err) {
+      if (this.closed) return;
+      if (err instanceof LiveConfigError && err.code === "not_configured") {
+        this.onStatus("waiting");
+        return;
+      }
+      this.onStatus(this.everLive ? "reconnecting" : "waiting");
+    }
+  }
+
+  stop() {
+    this.closed = true;
+    this.videoTrack = null;
+    this.audioTrack = null;
+    this.emitStream();
+    void this.room?.disconnect();
+    this.room = null;
+  }
+
+  private hydrateExisting() {
+    const room = this.room;
+    if (!room) return;
+    for (const participant of room.remoteParticipants.values()) {
+      if (participant.identity !== HOST_IDENTITY) continue;
+      for (const pub of participant.trackPublications.values()) {
+        if (pub.track) this.attachRemote(pub.track);
+      }
+    }
+  }
+
+  private attachRemote(track: RemoteTrack) {
+    if (track.kind === Track.Kind.Video) this.videoTrack = track.mediaStreamTrack;
+    if (track.kind === Track.Kind.Audio) this.audioTrack = track.mediaStreamTrack;
+    if (this.videoTrack) {
+      this.everLive = true;
+      this.onStatus("live");
+      this.emitStream();
+    }
+  }
+
+  private detachRemote(track: RemoteTrack) {
+    if (track.mediaStreamTrack === this.videoTrack) this.videoTrack = null;
+    if (track.mediaStreamTrack === this.audioTrack) this.audioTrack = null;
+    if (!this.videoTrack) {
+      this.emitStream();
+      this.onStatus(this.everLive ? "reconnecting" : "waiting");
+    } else {
+      this.emitStream();
+    }
+  }
+
+  private emitStream() {
+    if (!this.videoTrack) {
+      this.onStream(null);
+      return;
+    }
+    const tracks: MediaStreamTrack[] = [this.videoTrack];
+    if (this.audioTrack) tracks.push(this.audioTrack);
+    this.onStream(new MediaStream(tracks));
+  }
+
+  private async sendReport() {
+    if (!this.report || !this.room || this.room.state !== ConnectionState.Connected) return;
+    try {
+      await this.room.localParticipant.publishData(
+        new TextEncoder().encode(JSON.stringify({ t: "report", v: this.report })),
+        { reliable: true },
+      );
+    } catch {
+      // next reconnect
+    }
+  }
+}
+
+export function hostPasswordFromSession() {
+  if (typeof sessionStorage === "undefined") return "";
+  return sessionStorage.getItem(HOST_PW_KEY) ?? "";
+}
+
+export function rememberHostPassword(password: string) {
+  sessionStorage.setItem(HOST_PW_KEY, password);
 }
