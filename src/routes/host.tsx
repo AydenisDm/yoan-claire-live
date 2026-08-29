@@ -23,12 +23,13 @@ function HostPage() {
 
   const unlock = async (e: FormEvent) => {
     e.preventDefault();
+    const next = password.trim();
     setGateError(false);
     try {
       const res = await fetch("/api/live", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ role: "host", password, check: true }),
+        body: JSON.stringify({ role: "host", password: next, check: true }),
       });
       const body = (await res.json()) as { error?: string; ok?: boolean };
       if (res.status === 401 || body.error === "unauthorized") {
@@ -40,7 +41,7 @@ function HostPage() {
         return;
       }
       sessionStorage.setItem(HOST_GATE_KEY, "1");
-      rememberHostPassword(password);
+      rememberHostPassword(next);
       setAuthed(true);
     } catch {
       setGateError(true);
@@ -49,7 +50,7 @@ function HostPage() {
 
   if (!authed) {
     return (
-      <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-start px-5 pt-16 pb-12 sm:justify-center sm:pt-12">
+      <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-start px-5 pt-[max(4rem,calc(env(safe-area-inset-top)+2.5rem))] pb-12 sm:justify-center sm:pt-12">
         <p className="mb-2 text-center text-xs tracking-[0.28em] text-subtle uppercase">
           {eventConfig.productName}
         </p>
@@ -64,7 +65,7 @@ function HostPage() {
             aria-invalid={gateError}
           />
           {gateError ? <p className="text-sm text-warn">That password does not match.</p> : null}
-          <Button type="submit" className="w-full" size="lg">
+          <Button type="submit" className="w-full" size="lg" disabled={!password.trim()}>
             Continue
           </Button>
         </form>
@@ -111,13 +112,14 @@ function HostConsole() {
       setCopied(false);
       return;
     }
+    if (result === "cancelled") return;
     setCopyError(false);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-3xl flex-col gap-6 px-4 py-8 pb-24 sm:px-6">
+    <main className="mx-auto flex min-h-dvh max-w-3xl flex-col gap-6 px-4 pt-[max(2rem,env(safe-area-inset-top))] pb-24 sm:px-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-xs tracking-[0.28em] text-subtle uppercase">{eventConfig.productName}</p>

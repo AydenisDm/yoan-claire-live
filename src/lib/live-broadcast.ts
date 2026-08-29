@@ -80,7 +80,7 @@ export async function openCamera(facing: "environment" | "user") {
     {
       audio: {
         echoCancellation: true,
-        noiseSuppression: true,
+        noiseSuppression: false,
         autoGainControl: true,
         channelCount: 1,
       },
@@ -142,23 +142,25 @@ export async function copyWatchLink() {
     await navigator.clipboard.writeText(url);
     return "copied" as const;
   } catch {
-    if (typeof navigator.share === "function") {
-      try {
-        await navigator.share({ title: "Watch live", url });
-        return "shared" as const;
-      } catch {
-        return "failed" as const;
-      }
+    if (typeof navigator.share !== "function") return "failed" as const;
+    try {
+      await navigator.share({ title: "Watch live", url });
+      return "shared" as const;
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return "cancelled" as const;
+      return "failed" as const;
     }
-    return "failed" as const;
   }
 }
 
 export class StreamerBroadcast {
   private closed = false;
+  private starting = false;
   private room: Room | null = null;
   private stream: MediaStream;
   private onStats: (stats: LiveStats) => void;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private backoffMs = 1500;
   private readonly reports = new Map<string, "ok" | "bad">();
   private readonly password: string;
 
@@ -173,52 +175,81 @@ export class StreamerBroadcast {
   }
 
   async start() {
-    const creds = await fetchLiveToken("host", this.password);
-    if (this.closed) return;
-
-    const room = new Room({
-      adaptiveStream: false,
-      dynacast: true,
-      disconnectOnPageLeave: false,
-      publishDefaults: hostPublishDefaults,
-      videoCaptureDefaults: {
-        facingMode: "environment",
-        resolution: VideoPresets.h1080.resolution,
-      },
-    });
-    this.room = room;
-
-    room.on(RoomEvent.ParticipantConnected, () => this.emitStats());
-    room.on(RoomEvent.ParticipantDisconnected, (p) => {
-      this.reports.delete(p.identity);
-      this.emitStats();
-    });
-    room.on(RoomEvent.DataReceived, (payload, participant) => {
-      try {
-        const msg = JSON.parse(new TextDecoder().decode(payload)) as { t?: string; v?: string };
-        if (msg?.t === "report" && (msg.v === "ok" || msg.v === "bad") && participant) {
-          this.reports.set(participant.identity, msg.v);
-          this.emitStats();
-        }
-      } catch {
-        // ignore
-      }
-    });
-    room.on(RoomEvent.Disconnected, () => {
-      if (!this.closed) this.emitStats();
-    });
-
-    await room.connect(creds.url, creds.token);
-    if (this.closed) {
-      await room.disconnect();
-      return;
+    if (this.closed || this.starting) return;
+    this.starting = true;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
     }
-    await this.publish(this.stream);
-    this.emitStats();
+    try {
+      const prev = this.room;
+      this.room = null;
+      await prev?.disconnect();
+    } catch {
+      // ignore
+    }
+    try {
+      const creds = await fetchLiveToken("host", this.password);
+      if (this.closed) return;
+
+      const room = new Room({
+        adaptiveStream: false,
+        dynacast: true,
+        disconnectOnPageLeave: false,
+        publishDefaults: hostPublishDefaults,
+        videoCaptureDefaults: {
+          facingMode: "environment",
+          resolution: VideoPresets.h1080.resolution,
+        },
+      });
+      this.room = room;
+
+      room.on(RoomEvent.ParticipantConnected, () => this.emitStats());
+      room.on(RoomEvent.ParticipantDisconnected, (p) => {
+        this.reports.delete(p.identity);
+        this.emitStats();
+      });
+      room.on(RoomEvent.DataReceived, (payload, participant) => {
+        try {
+          const msg = JSON.parse(new TextDecoder().decode(payload)) as { t?: string; v?: string };
+          if (msg?.t === "report" && (msg.v === "ok" || msg.v === "bad") && participant) {
+            this.reports.set(participant.identity, msg.v);
+            this.emitStats();
+          }
+        } catch {
+          // ignore
+        }
+      });
+      room.on(RoomEvent.Disconnected, () => {
+        if (this.closed || this.room !== room) return;
+        this.emitStats();
+        this.scheduleReconnect();
+      });
+
+      await room.connect(creds.url, creds.token);
+      if (this.closed) {
+        await room.disconnect();
+        return;
+      }
+      await this.publish(this.stream);
+      this.backoffMs = 1500;
+      this.emitStats();
+    } catch (err) {
+      if (this.closed) return;
+      if (err instanceof LiveConfigError && err.code === "unauthorized") throw err;
+      this.scheduleReconnect();
+      throw err;
+    } finally {
+      this.starting = false;
+    }
   }
 
   stop() {
     this.closed = true;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
     void this.room?.disconnect();
     this.room = null;
     this.reports.clear();
@@ -230,6 +261,16 @@ export class StreamerBroadcast {
     if (!this.room || this.room.state !== ConnectionState.Connected) return;
     await this.swapTrack("video", next.getVideoTracks()[0]);
     await this.swapTrack("audio", next.getAudioTracks()[0]);
+  }
+
+  private scheduleReconnect() {
+    if (this.closed || this.reconnectTimer) return;
+    const wait = this.backoffMs;
+    this.backoffMs = Math.min(8000, Math.round(this.backoffMs * 1.4));
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      void this.start().catch(() => undefined);
+    }, wait);
   }
 
   private async swapTrack(kind: "video" | "audio", track?: MediaStreamTrack) {
@@ -321,11 +362,12 @@ export class ViewerSession {
       this.reconnectTimer = null;
     }
     try {
-      await this.room?.disconnect();
+      const prev = this.room;
+      this.room = null;
+      await prev?.disconnect();
     } catch {
       // ignore
     }
-    this.room = null;
     this.onStatus(this.everLive ? "reconnecting" : "waiting");
     try {
       const creds = await fetchLiveToken("guest");

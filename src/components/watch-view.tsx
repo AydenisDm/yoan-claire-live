@@ -6,7 +6,7 @@ import { parsePlayback } from "@/lib/playback";
 export function WatchView() {
   const playback = parsePlayback(eventConfig.playbackUrl);
   return (
-    <main className="mx-auto flex min-h-dvh max-w-4xl flex-col px-4 pt-4 pb-24 sm:px-6 sm:pt-8">
+    <main className="mx-auto flex min-h-dvh max-w-4xl flex-col px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-24 sm:px-6 sm:pt-8">
       <header className="relative mb-8 text-center">
         <Link
           to="/host"
@@ -27,8 +27,7 @@ export function WatchView() {
       <LivePlayer playback={playback} />
       <section className="mt-6 space-y-3 text-center">
         <p className="text-sm text-muted">
-          Tap the picture for sound. Rotate your phone for a larger view. You do not need an
-          account.
+          When the picture appears, tap for sound. Rotate your phone for a larger view.
         </p>
         <p className="text-xs leading-relaxed text-subtle">
           If the picture pauses, stay on this page — it reconnects on its own.

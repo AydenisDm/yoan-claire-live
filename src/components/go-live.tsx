@@ -58,6 +58,7 @@ export function GoLive() {
   const [torchOn, setTorchOn] = useState(false);
   const [chromeOn, setChromeOn] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [flipping, setFlipping] = useState(false);
 
   const attach = (stream: MediaStream) => {
     const el = videoRef.current;
@@ -140,9 +141,10 @@ export function GoLive() {
   };
 
   const flip = async () => {
-    if (!runtime) return;
+    if (!runtime || flipping) return;
     const previous = facing;
     const next = facing === "environment" ? "user" : "environment";
+    setFlipping(true);
     setError(null);
     runtime.stream.getTracks().forEach((t) => t.stop());
     try {
@@ -167,6 +169,8 @@ export function GoLive() {
       } catch {
         setError("Could not switch camera. Stop, then Go live again.");
       }
+    } finally {
+      setFlipping(false);
     }
   };
 
@@ -189,6 +193,7 @@ export function GoLive() {
       setError("Could not copy the watch link. Share the site address instead.");
       return;
     }
+    if (result === "cancelled") return;
     setCopied(true);
     setError(null);
     window.setTimeout(() => setCopied(false), 1600);
@@ -201,6 +206,7 @@ export function GoLive() {
       playsInline
       muted
       autoPlay
+      disablePictureInPicture
     />
   );
 
@@ -208,7 +214,7 @@ export function GoLive() {
     return (
       <div className="fixed inset-0 z-50 bg-bg" onClick={() => setChromeOn(true)}>
         <div className="absolute inset-0">{preview}</div>
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-3 p-4 pt-[max(1rem,env(safe-area-inset-top))]">
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-3 bg-gradient-to-b from-bg/80 to-transparent p-4 pt-[max(1rem,env(safe-area-inset-top))]">
           <Badge tone="live">
             <span className="size-1.5 rounded-full bg-live" />
             Live
@@ -228,7 +234,7 @@ export function GoLive() {
         </div>
         <div
           className={cn(
-            "absolute inset-x-0 bottom-0 z-20 p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] transition-opacity duration-200",
+            "absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-bg/90 via-bg/70 to-transparent p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-10 transition-opacity duration-200",
             chromeOn ? "opacity-100" : "pointer-events-none opacity-0",
           )}
         >
@@ -244,9 +250,9 @@ export function GoLive() {
               </p>
             ) : null}
             <div className="flex flex-wrap items-center justify-center gap-2">
-              <Button type="button" variant="secondary" onClick={() => void flip()}>
+              <Button type="button" variant="secondary" disabled={flipping} onClick={() => void flip()}>
                 <FlipHorizontal2 />
-                Flip
+                {flipping ? "Switching…" : "Flip"}
               </Button>
               {torch ? (
                 <Button type="button" variant="secondary" onClick={() => void onTorch()}>

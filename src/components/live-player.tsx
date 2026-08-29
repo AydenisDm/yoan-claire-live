@@ -192,6 +192,7 @@ function WebRtcViewer() {
             playsInline
             muted={muted}
             autoPlay
+            disablePictureInPicture
           />
         </div>
       </PlayerShell>
