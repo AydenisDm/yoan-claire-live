@@ -26,11 +26,14 @@ export class LiveConfigError extends Error {
 type TokenResponse = { token: string; url: string; identity: string; room: string };
 
 async function fetchLiveToken(role: "host" | "guest", password?: string): Promise<TokenResponse> {
-  const identity = role === "guest" ? guestIdentity() : HOST_IDENTITY;
+  const payload =
+    role === "guest"
+      ? { role, identity: guestIdentity() }
+      : { role, password };
   const res = await fetch("/api/live", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ role, password, identity }),
+    body: JSON.stringify(payload),
   });
   let body: { error?: string } & Partial<TokenResponse> = {};
   try {
@@ -51,23 +54,39 @@ async function fetchLiveToken(role: "host" | "guest", password?: string): Promis
 }
 
 export async function openCamera(facing: "environment" | "user") {
-  const stream = await navigator.mediaDevices.getUserMedia({
-    audio: {
-      echoCancellation: true,
-      noiseSuppression: false,
-      autoGainControl: true,
-      channelCount: 1,
+  const attempts: MediaStreamConstraints[] = [
+    {
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: false,
+        autoGainControl: true,
+        channelCount: 1,
+      },
+      video: {
+        facingMode: { ideal: facing },
+        width: { ideal: 1280, max: 1920 },
+        height: { ideal: 720, max: 1080 },
+        frameRate: { ideal: 24, max: 30 },
+      },
     },
-    video: {
-      facingMode: { ideal: facing },
-      width: { ideal: 1280, max: 1920 },
-      height: { ideal: 720, max: 1080 },
-      frameRate: { ideal: 24, max: 30 },
+    {
+      audio: true,
+      video: { facingMode: facing },
     },
-  });
-  for (const track of stream.getVideoTracks()) track.contentHint = "motion";
-  for (const track of stream.getAudioTracks()) track.contentHint = "speech";
-  return stream;
+    { audio: true, video: true },
+  ];
+  let last: unknown;
+  for (const constraints of attempts) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      for (const track of stream.getVideoTracks()) track.contentHint = "motion";
+      for (const track of stream.getAudioTracks()) track.contentHint = "speech";
+      return stream;
+    } catch (err) {
+      last = err;
+    }
+  }
+  throw last instanceof Error ? last : new Error("camera");
 }
 
 export async function toggleTorch(stream: MediaStream, on: boolean) {

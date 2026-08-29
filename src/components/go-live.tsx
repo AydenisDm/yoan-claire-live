@@ -37,13 +37,12 @@ async function keepAwake() {
 }
 
 function errorCopy(err: unknown) {
-  if (err instanceof LiveConfigError && err.code === "not_configured") {
-    return "The live room is not connected on the server yet. Add LiveKit Cloud keys, then try again.";
+  if (err instanceof LiveConfigError) return err.message;
+  const name = err && typeof err === "object" && "name" in err ? String(err.name) : "";
+  if (name === "NotAllowedError" || name === "NotFoundError" || name === "NotReadableError") {
+    return "Allow camera and microphone, then try Go live again.";
   }
-  if (err instanceof LiveConfigError && err.code === "unauthorized") {
-    return "Host password did not match. Unlock Streamer again, then Go live.";
-  }
-  return "Allow camera and microphone, then try Go live again.";
+  return "Could not start the live picture. Try Go live again.";
 }
 
 export function GoLive() {

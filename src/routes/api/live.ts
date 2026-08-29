@@ -7,10 +7,7 @@ const postSchema = z.object({
   role: z.enum(["host", "guest"]),
   password: z.string().max(128).optional(),
   check: z.boolean().optional(),
-  identity: z
-    .string()
-    .regex(/^g-[a-zA-Z0-9_-]{6,32}$/)
-    .optional(),
+  identity: z.string().max(64).optional(),
 });
 
 function json(body: unknown, status = 200) {
@@ -62,7 +59,12 @@ async function handlePost(request: Request) {
   if (!env.ok) return json({ error: "not_configured", configured: false });
 
   const room = liveRoomName(eventConfig.roomId);
-  const identity = role === "host" ? HOST_IDENTITY : (guestId ?? `g-${crypto.randomUUID().slice(0, 12)}`);
+  const identity =
+    role === "host"
+      ? HOST_IDENTITY
+      : guestId && guestId !== HOST_IDENTITY && /^g-[a-zA-Z0-9_-]{6,32}$/.test(guestId)
+        ? guestId
+        : `g-${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`;
 
   const { AccessToken, RoomServiceClient } = await import("livekit-server-sdk");
 
