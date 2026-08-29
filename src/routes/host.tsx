@@ -21,14 +21,28 @@ function HostPage() {
     }
   }, []);
 
-  const unlock = (e: FormEvent) => {
+  const unlock = async (e: FormEvent) => {
     e.preventDefault();
-    if (password === eventConfig.hostPassword) {
+    setGateError(false);
+    try {
+      const res = await fetch("/api/live", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ role: "host", password, check: true }),
+      });
+      const body = (await res.json()) as { error?: string; ok?: boolean };
+      if (res.status === 401 || body.error === "unauthorized") {
+        setGateError(true);
+        return;
+      }
+      if (!res.ok && body.error !== "not_configured") {
+        setGateError(true);
+        return;
+      }
       sessionStorage.setItem(HOST_GATE_KEY, "1");
       rememberHostPassword(password);
       setAuthed(true);
-      setGateError(false);
-    } else {
+    } catch {
       setGateError(true);
     }
   };
@@ -42,7 +56,7 @@ function HostPage() {
         <h1 className="mb-6 text-center font-serif text-4xl text-fg">
           Go live for {eventConfig.coupleNames}
         </h1>
-        <form onSubmit={unlock} className="space-y-3">
+        <form onSubmit={(e) => void unlock(e)} className="space-y-3">
           <Input
             type="password"
             autoComplete="current-password"

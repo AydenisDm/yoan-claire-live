@@ -6,6 +6,7 @@ import { HOST_IDENTITY, MAX_VIEWERS, liveRoomName } from "@/lib/live-config";
 const postSchema = z.object({
   role: z.enum(["host", "guest"]),
   password: z.string().max(128).optional(),
+  check: z.boolean().optional(),
   identity: z
     .string()
     .regex(/^g-[a-zA-Z0-9_-]{6,32}$/)
@@ -41,7 +42,6 @@ async function handleGet() {
 
 async function handlePost(request: Request) {
   const env = livekitEnv();
-  if (!env.ok) return json({ error: "not_configured", configured: false });
 
   let raw: unknown;
   try {
@@ -52,10 +52,14 @@ async function handlePost(request: Request) {
   const parsed = postSchema.safeParse(raw);
   if (!parsed.success) return json({ error: "invalid" }, 400);
 
-  const { role, password, identity: guestId } = parsed.data;
+  const { role, password, identity: guestId, check } = parsed.data;
   if (role === "host" && password !== hostPassword()) {
     return json({ error: "unauthorized" }, 401);
   }
+  if (check) {
+    return json({ ok: true, configured: env.ok });
+  }
+  if (!env.ok) return json({ error: "not_configured", configured: false });
 
   const room = liveRoomName(eventConfig.roomId);
   const identity = role === "host" ? HOST_IDENTITY : (guestId ?? `g-${crypto.randomUUID().slice(0, 12)}`);

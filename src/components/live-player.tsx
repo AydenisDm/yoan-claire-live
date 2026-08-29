@@ -17,6 +17,7 @@ type ViewerHandle = {
   start: () => Promise<void>;
   stop: () => void;
   setReport: (value: "ok" | "bad") => void;
+  startAudio: () => Promise<void>;
 };
 
 export function LivePlayer({ playback }: { playback: Playback }) {
@@ -153,7 +154,10 @@ function WebRtcViewer() {
     const next = !video.muted;
     video.muted = next;
     setMuted(next);
-    if (!next) void video.play().catch(() => undefined);
+    if (!next) {
+      void sessionRef.current?.startAudio();
+      void video.play().catch(() => undefined);
+    }
   };
 
   const fullscreen = () => {

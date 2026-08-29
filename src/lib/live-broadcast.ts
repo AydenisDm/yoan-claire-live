@@ -214,6 +214,8 @@ export class ViewerSession {
   private audioTrack: MediaStreamTrack | null = null;
   private report: "ok" | "bad" | null = null;
   private everLive = false;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private backoffMs = 1500;
   private readonly onStream: (stream: MediaStream | null) => void;
   private readonly onStatus: (status: "waiting" | "live" | "reconnecting") => void;
 
@@ -225,13 +227,32 @@ export class ViewerSession {
     this.onStatus = onStatus;
   }
 
+  async startAudio() {
+    try {
+      await this.room?.startAudio();
+    } catch {
+      // iOS may still require the unmute tap on the video element
+    }
+  }
+
   setReport(value: "ok" | "bad") {
     this.report = value;
     void this.sendReport();
   }
 
   async start() {
-    this.onStatus("waiting");
+    if (this.closed) return;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    try {
+      await this.room?.disconnect();
+    } catch {
+      // ignore
+    }
+    this.room = null;
+    this.onStatus(this.everLive ? "reconnecting" : "waiting");
     try {
       const creds = await fetchLiveToken("guest");
       if (this.closed) return;
@@ -267,11 +288,12 @@ export class ViewerSession {
         }
       });
       room.on(RoomEvent.Disconnected, () => {
-        if (this.closed) return;
+        if (this.closed || this.room !== room) return;
         this.videoTrack = null;
         this.audioTrack = null;
         this.emitStream();
         this.onStatus(this.everLive ? "reconnecting" : "waiting");
+        this.scheduleReconnect();
       });
 
       await room.connect(creds.url, creds.token);
@@ -288,11 +310,23 @@ export class ViewerSession {
         return;
       }
       this.onStatus(this.everLive ? "reconnecting" : "waiting");
+      this.scheduleReconnect();
     }
+  }
+
+  private scheduleReconnect() {
+    if (this.closed) return;
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    const wait = this.backoffMs;
+    this.backoffMs = Math.min(8000, Math.round(this.backoffMs * 1.4));
+    this.reconnectTimer = setTimeout(() => {
+      void this.start();
+    }, wait);
   }
 
   stop() {
     this.closed = true;
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
     this.videoTrack = null;
     this.audioTrack = null;
     this.emitStream();
@@ -316,6 +350,7 @@ export class ViewerSession {
     if (track.kind === Track.Kind.Audio) this.audioTrack = track.mediaStreamTrack;
     if (this.videoTrack) {
       this.everLive = true;
+      this.backoffMs = 1500;
       this.onStatus("live");
       this.emitStream();
     }
