@@ -4,12 +4,12 @@ export function WaitingRoom({ status = "waiting" }: { status?: "waiting" | "reco
   const title = status === "reconnecting" ? "Reconnecting" : "The stream will begin shortly";
   const copy =
     status === "reconnecting"
-      ? "The live feed dropped for a moment. Holding this page open — we will restore the picture automatically."
-      : "You are in the right place. Leave this page open. When the event goes live, the picture will appear here.";
+      ? "The live feed dropped. Stay on this page — the picture comes back on its own."
+      : "Leave this page open. When the event goes live, the picture appears here.";
   return (
-    <div className="flex aspect-video w-full flex-col items-center justify-center gap-4 bg-raised px-6 text-center">
+    <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-raised px-5 py-8 text-center sm:gap-3 sm:px-6">
       <span className="wait-dot size-1.5 rounded-full bg-muted" aria-hidden="true" />
-      <p className="font-serif text-2xl text-fg sm:text-3xl">{title}</p>
+      <p className="font-serif text-xl text-fg sm:text-3xl">{title}</p>
       <p className="max-w-md text-sm leading-relaxed text-muted">{copy}</p>
       <p className="text-xs tracking-widest text-subtle uppercase">{eventConfig.productName}</p>
     </div>

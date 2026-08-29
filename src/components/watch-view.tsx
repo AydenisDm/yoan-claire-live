@@ -10,7 +10,7 @@ export function WatchView() {
       <header className="relative mb-8 text-center">
         <Link
           to="/host"
-          className="absolute top-0 right-0 z-10 inline-flex min-h-11 items-center text-sm font-medium text-fg underline-offset-4 hover:underline"
+          className="absolute top-0 right-0 z-10 inline-flex min-h-11 items-center text-sm text-muted underline-offset-4 hover:text-fg hover:underline"
         >
           Streamer
         </Link>

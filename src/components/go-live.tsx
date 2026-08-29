@@ -206,9 +206,13 @@ export function GoLive() {
 
   if (live) {
     return (
-      <div className="fixed inset-0 z-50 bg-fg" onClick={() => setChromeOn(true)}>
+      <div className="fixed inset-0 z-50 bg-bg" onClick={() => setChromeOn(true)}>
         <div className="absolute inset-0">{preview}</div>
-        <div className="pointer-events-none absolute top-4 right-4 z-20 pt-[env(safe-area-inset-top)]">
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-3 p-4 pt-[max(1rem,env(safe-area-inset-top))]">
+          <Badge tone="live">
+            <span className="size-1.5 rounded-full bg-live" />
+            Live
+          </Badge>
           <Button
             type="button"
             variant="secondary"
@@ -224,31 +228,22 @@ export function GoLive() {
         </div>
         <div
           className={cn(
-            "absolute inset-0 flex flex-col justify-between p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))] transition-opacity duration-200",
+            "absolute inset-x-0 bottom-0 z-20 p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] transition-opacity duration-200",
             chromeOn ? "opacity-100" : "pointer-events-none opacity-0",
           )}
         >
-          <div className="flex items-start justify-between gap-3 pr-24">
-            <Badge tone="live">
-              <span className="size-1.5 rounded-full bg-live" />
-              Live
-            </Badge>
-            <p className="max-w-[70%] rounded-full bg-fg/70 px-3 py-1.5 text-right text-sm font-medium text-accent-fg tabular-nums">
+          <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
+            <p className="text-center text-sm font-medium text-fg tabular-nums">
               {stats.watching} watching
               {stats.ok ? ` · ${stats.ok} clear` : ""}
               {stats.trouble ? ` · ${stats.trouble} trouble` : ""}
             </p>
-          </div>
-          <div className="space-y-3">
             {error ? (
-              <p className="rounded-md bg-fg/70 px-3 py-2 text-center text-sm text-warn">
+              <p className="rounded-md bg-bg/80 px-3 py-2 text-center text-sm text-warn">
                 {error}
               </p>
             ) : null}
-            <div
-              className="flex flex-wrap items-center justify-center gap-2"
-              onClick={(e) => e.stopPropagation()}
-            >
+            <div className="flex flex-wrap items-center justify-center gap-2">
               <Button type="button" variant="secondary" onClick={() => void flip()}>
                 <FlipHorizontal2 />
                 Flip
@@ -272,20 +267,18 @@ export function GoLive() {
 
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-surface">
-      <div className="relative aspect-[9/16] max-h-[70vh] bg-raised sm:aspect-video">
-        {preview}
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-bg/75 px-6 text-center">
-          <p className="font-serif text-2xl text-fg">Ready when you are</p>
-          <p className="max-w-sm text-sm text-muted">
-            Go live fills this phone’s screen. Guests only watch the link. Keep the phone
-            plugged in and this page open.
-          </p>
-        </div>
+      <div className="px-5 pt-6 pb-2 text-center sm:px-6">
+        <p className="font-serif text-2xl text-fg">Ready when you are</p>
+        <p className="mx-auto mt-2 max-w-sm text-sm text-muted">
+          One tap fills this phone’s screen. Guests only watch the link. Keep the tab open
+          and the phone plugged in.
+        </p>
       </div>
-      {error ? <p className="px-4 pt-3 text-sm text-warn">{error}</p> : null}
+      {error ? <p className="px-5 pt-3 text-sm text-warn">{error}</p> : null}
       <div className="p-3">
         <Button
           type="button"
+          variant="live"
           size="lg"
           className="w-full"
           disabled={busy}

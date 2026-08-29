@@ -117,18 +117,17 @@ function HostConsole() {
   };
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-3xl flex-col gap-8 px-4 py-8 pb-24 sm:px-6">
+    <main className="mx-auto flex min-h-dvh max-w-3xl flex-col gap-6 px-4 py-8 pb-24 sm:px-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-xs tracking-[0.28em] text-subtle uppercase">{eventConfig.productName}</p>
-          <h1 className="font-serif text-3xl text-fg sm:text-4xl">{eventConfig.eventName}</h1>
-          {eventConfig.eventDate ? (
-            <p className="mt-1 text-sm text-muted">{eventConfig.eventDate}</p>
-          ) : (
-            <p className="mt-1 text-sm text-muted">Streamer controls</p>
-          )}
+          <h1 className="font-serif text-3xl text-fg sm:text-4xl">Streamer</h1>
+          <p className="mt-1 text-sm text-muted">Film from this phone. Guests only watch.</p>
         </div>
-        <Link to="/" className="text-sm text-muted underline-offset-4 hover:underline">
+        <Link
+          to="/"
+          className="inline-flex min-h-11 items-center text-sm text-muted underline-offset-4 hover:underline"
+        >
           Preview guest view
         </Link>
       </header>
@@ -147,9 +146,15 @@ function HostConsole() {
           Send this. Guests only watch. The live picture stays on this site — it is not posted
           publicly.
         </p>
-        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-          <Input readOnly value={watchUrl} aria-label="Watch link" />
-          <Button type="button" onClick={() => void copyWatch()} className="sm:w-40">
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Input
+            readOnly
+            value={watchUrl}
+            aria-label="Watch link"
+            className="min-w-0 flex-1"
+            onFocus={(e) => e.currentTarget.select()}
+          />
+          <Button type="button" onClick={() => void copyWatch()} className="w-full shrink-0 sm:w-auto">
             {copied ? <Check /> : <Copy />}
             {copied ? "Copied" : "Copy link"}
           </Button>
@@ -162,9 +167,8 @@ function HostConsole() {
       <section className="space-y-3">
         <h2 className="font-serif text-xl text-fg">Go live from this phone</h2>
         <p className="text-sm text-muted">
-          One tap. This phone publishes once; guests subscribe from the live room. Keep this
-          page open. A phone hotspot is still the most stable if venue Wi-Fi is packed. Plug
-          the phone in.
+          This phone publishes once. Guests subscribe from the live room. Hotspot if the
+          venue Wi-Fi is packed.
         </p>
         <GoLive />
       </section>

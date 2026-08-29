@@ -72,7 +72,7 @@ function PlayerShell({
         </Badge>
       </div>
       {status === "live" && muted && onUnmute ? (
-        <div className="absolute inset-0 z-20 flex items-end justify-center bg-fg/25 p-4 pb-6">
+        <div className="absolute inset-0 z-20 flex items-end justify-center bg-bg/55 p-4 pb-6">
           <Button
             type="button"
             size="lg"
@@ -85,7 +85,7 @@ function PlayerShell({
         </div>
       ) : null}
       <div className="absolute right-3 bottom-3 z-20 flex gap-2">
-        {onUnmute && !muted ? (
+        {status === "live" && onUnmute && !muted ? (
           <Button
             type="button"
             size="icon"
@@ -96,7 +96,7 @@ function PlayerShell({
             <VolumeX />
           </Button>
         ) : null}
-        {onFullscreen ? (
+        {status === "live" && onFullscreen ? (
           <Button
             type="button"
             size="icon"
