@@ -11,7 +11,7 @@ import {
   type RemoteTrack,
   type RemoteTrackPublication,
 } from "livekit-client";
-import { HOST_IDENTITY, HOST_PW_KEY, guestIdentity } from "@/lib/live-config";
+import { HOST_IDENTITY, HOST_PW_KEY, PRODUCTION_LIVE_API, guestIdentity } from "@/lib/live-config";
 
 export type LiveStats = {
   watching: number;
@@ -52,7 +52,29 @@ function isHostParticipant(participant: {
 async function fetchLiveToken(role: "host" | "guest", password?: string): Promise<TokenResponse> {
   const payload =
     role === "guest" ? { role, identity: guestIdentity() } : { role, password };
-  const res = await fetch("/api/live", {
+  const endpoints = ["/api/live"];
+  if (typeof window !== "undefined" && window.location.origin !== "https://yoan-claire-live.vercel.app") {
+    endpoints.push(PRODUCTION_LIVE_API);
+  }
+
+  let last: LiveConfigError | null = null;
+  for (const endpoint of endpoints) {
+    try {
+      return await mintToken(endpoint, payload);
+    } catch (err) {
+      if (err instanceof LiveConfigError) {
+        last = err;
+        if (err.code === "unauthorized") throw err;
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw last ?? new LiveConfigError("failed", "Could not join the live room.");
+}
+
+async function mintToken(endpoint: string, payload: object): Promise<TokenResponse> {
+  const res = await fetch(endpoint, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(payload),

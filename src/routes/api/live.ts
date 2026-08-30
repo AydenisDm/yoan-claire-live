@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { eventConfig } from "@/lib/event-config";
-import { HOST_IDENTITY, MAX_VIEWERS, liveRoomName } from "@/lib/live-config";
+import { HOST_IDENTITY, MAX_VIEWERS, PRODUCTION_LIVE_API, liveRoomName } from "@/lib/live-config";
 
 const postSchema = z.object({
   role: z.enum(["host", "guest"]),
@@ -10,12 +10,16 @@ const postSchema = z.object({
   identity: z.string().max(64).optional(),
 });
 
-const UPSTREAM_LIVE_API = "https://yoan-claire-live.vercel.app/api/live";
+const CORS = {
+  "access-control-allow-origin": "*",
+  "access-control-allow-methods": "GET,POST,OPTIONS",
+  "access-control-allow-headers": "content-type",
+};
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "content-type": "application/json", "cache-control": "no-store" },
+    headers: { "content-type": "application/json", "cache-control": "no-store", ...CORS },
   });
 }
 
@@ -43,9 +47,8 @@ function httpUrl(wsUrl: string) {
 }
 
 async function proxyProduction(init?: RequestInit) {
-  if (!import.meta.env.DEV) return null;
   try {
-    const res = await fetch(UPSTREAM_LIVE_API, {
+    const res = await fetch(PRODUCTION_LIVE_API, {
       ...init,
       headers: {
         "content-type": "application/json",
@@ -56,7 +59,7 @@ async function proxyProduction(init?: RequestInit) {
     const body = await res.text();
     return new Response(body, {
       status: res.status,
-      headers: { "content-type": "application/json", "cache-control": "no-store" },
+      headers: { "content-type": "application/json", "cache-control": "no-store", ...CORS },
     });
   } catch {
     return null;
@@ -150,6 +153,12 @@ async function handlePost(request: Request) {
 
 async function handle(request: Request) {
   try {
+    if (request.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: CORS });
+    }
+    if (request.headers.get("x-eventstream-proxy") === "1" && !livekitEnv().ok) {
+      return json({ error: "not_configured", configured: false });
+    }
     if (request.method === "GET") return await handleGet();
     if (request.method === "POST") return await handlePost(request);
     return json({ error: "method" }, 405);
