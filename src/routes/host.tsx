@@ -87,23 +87,7 @@ function HostPage() {
 function HostConsole() {
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState(false);
-  const [configured, setConfigured] = useState<boolean | null>(null);
   const watchUrl = typeof window === "undefined" ? "/" : `${window.location.origin}/`;
-
-  useEffect(() => {
-    let cancelled = false;
-    void fetch("/api/live")
-      .then((r) => r.json())
-      .then((body: { configured?: boolean }) => {
-        if (!cancelled) setConfigured(Boolean(body.configured));
-      })
-      .catch(() => {
-        if (!cancelled) setConfigured(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const copyWatch = async () => {
     const result = await copyWatchLink();
@@ -133,14 +117,6 @@ function HostConsole() {
           Preview guest view
         </Link>
       </header>
-
-      {configured === false ? (
-        <section className="rounded-xl border border-border bg-raised px-4 py-3 text-sm text-muted">
-          The live room is not connected yet. Add your LiveKit Cloud project URL, API key, and
-          API secret to this site’s server settings, then refresh. Guests can still open the
-          watch link and will see the waiting room until you go live.
-        </section>
-      ) : null}
 
       <section className="rounded-xl border border-border bg-surface p-4 sm:p-5">
         <h2 className="font-serif text-xl text-fg">Guest watch link</h2>

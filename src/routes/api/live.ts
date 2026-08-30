@@ -10,6 +10,8 @@ const postSchema = z.object({
   identity: z.string().max(64).optional(),
 });
 
+const UPSTREAM_LIVE_API = "https://yoan-claire-live.vercel.app/api/live";
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -17,24 +19,56 @@ function json(body: unknown, status = 200) {
   });
 }
 
+function envVal(...keys: string[]) {
+  for (const key of keys) {
+    const value = process.env[key]?.trim();
+    if (value) return value;
+  }
+  return "";
+}
+
 function livekitEnv() {
-  const url = process.env.LIVEKIT_URL?.trim() ?? "";
-  const apiKey = process.env.LIVEKIT_API_KEY?.trim() ?? "";
-  const apiSecret = process.env.LIVEKIT_API_SECRET?.trim() ?? "";
+  const url = envVal("LIVEKIT_URL");
+  const apiKey = envVal("LIVEKIT_API_KEY");
+  const apiSecret = envVal("LIVEKIT_API_SECRET");
   return { url, apiKey, apiSecret, ok: Boolean(url && apiKey && apiSecret) };
 }
 
 function hostPassword() {
-  return process.env.HOST_PASSWORD?.trim() || eventConfig.hostPassword;
+  return envVal("HOST_PASSWORD") || eventConfig.hostPassword;
 }
 
 function httpUrl(wsUrl: string) {
   return wsUrl.replace(/^ws/i, "http");
 }
 
+async function proxyProduction(init?: RequestInit) {
+  if (!import.meta.env.DEV) return null;
+  try {
+    const res = await fetch(UPSTREAM_LIVE_API, {
+      ...init,
+      headers: {
+        "content-type": "application/json",
+        "x-eventstream-proxy": "1",
+        ...(init?.headers ?? {}),
+      },
+    });
+    const body = await res.text();
+    return new Response(body, {
+      status: res.status,
+      headers: { "content-type": "application/json", "cache-control": "no-store" },
+    });
+  } catch {
+    return null;
+  }
+}
+
 async function handleGet() {
   const { ok } = livekitEnv();
-  return json({ configured: ok });
+  if (ok) return json({ configured: true });
+  const proxied = await proxyProduction({ method: "GET" });
+  if (proxied) return proxied;
+  return json({ configured: false });
 }
 
 async function handlePost(request: Request) {
@@ -54,9 +88,22 @@ async function handlePost(request: Request) {
     return json({ error: "unauthorized" }, 401);
   }
   if (check) {
-    return json({ ok: true, configured: env.ok });
+    if (env.ok) return json({ ok: true, configured: true });
+    const proxied = await proxyProduction({
+      method: "POST",
+      body: JSON.stringify({ role: "guest", check: true }),
+    });
+    if (proxied) return json({ ok: true, configured: true });
+    return json({ ok: true, configured: false });
   }
-  if (!env.ok) return json({ error: "not_configured", configured: false });
+  if (!env.ok) {
+    const proxied = await proxyProduction({
+      method: "POST",
+      body: JSON.stringify(parsed.data),
+    });
+    if (proxied) return proxied;
+    return json({ error: "not_configured", configured: false });
+  }
 
   const room = liveRoomName(eventConfig.roomId);
   const identity =
