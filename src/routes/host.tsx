@@ -81,8 +81,8 @@ function HostConsole() {
       <section className="space-y-3">
         <h2 className="font-serif text-xl text-fg">Go live</h2>
         <p className="text-sm text-muted">
-          One tap fills the screen. Keep the phone plugged in. A hotspot beats packed venue
-          Wi-Fi.
+          One tap fills the screen. Keep the phone plugged in. The room holds about 200
+          guests. A hotspot beats packed venue Wi-Fi.
         </p>
         <GoLive />
       </section>

@@ -1,4 +1,5 @@
 import { AudioPresets, ConnectionState, Room, RoomEvent, Track, VideoPresets, VideoQuality, type LocalTrackPublication, type RemoteParticipant, type RemoteTrack, type RemoteTrackPublication } from "livekit-client";
+import { chatLabel, isChatId, type ChatLine } from "@/lib/crowd";
 import { HOST_IDENTITY, HOST_PW_KEY, PRODUCTION_LIVE_API, guestIdentity } from "@/lib/live-config";
 
 export type LiveStats = {
@@ -7,17 +8,19 @@ export type LiveStats = {
   trouble: number;
 };
 
+export type { ChatLine };
+
 const hostPublishDefaults = {
   videoCodec: "h264" as const,
   simulcast: true,
   videoEncoding: {
-    maxBitrate: 4_500_000,
+    maxBitrate: 3_200_000,
     maxFramerate: 30,
     priority: "high" as const,
   },
   videoSimulcastLayers: [VideoPresets.h360, VideoPresets.h720],
   degradationPreference: "maintain-resolution" as const,
-  audioPreset: AudioPresets.musicHighQuality,
+  audioPreset: AudioPresets.music,
 };
 
 export class LiveConfigError extends Error {
@@ -177,19 +180,30 @@ export class StreamerBroadcast {
   private room: Room | null = null;
   private stream: MediaStream;
   private onStats: (stats: LiveStats) => void;
+  private onChat: (line: ChatLine) => void;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private backoffMs = 1500;
   private readonly reports = new Map<string, "ok" | "bad">();
   private readonly password: string;
 
-  constructor(stream: MediaStream, onStats: (stats: LiveStats) => void, password: string) {
+  constructor(
+    stream: MediaStream,
+    onStats: (stats: LiveStats) => void,
+    password: string,
+    onChat: (line: ChatLine) => void = () => undefined,
+  ) {
     this.stream = stream;
     this.onStats = onStats;
+    this.onChat = onChat;
     this.password = password;
   }
 
   setOnViewers(fn: (stats: LiveStats) => void) {
     this.onStats = fn;
+  }
+
+  setOnChat(fn: (line: ChatLine) => void) {
+    this.onChat = fn;
   }
 
   async start() {
@@ -228,15 +242,7 @@ export class StreamerBroadcast {
         this.emitStats();
       });
       room.on(RoomEvent.DataReceived, (payload, participant) => {
-        try {
-          const msg = JSON.parse(new TextDecoder().decode(payload)) as { t?: string; v?: string };
-          if (msg?.t === "report" && (msg.v === "ok" || msg.v === "bad") && participant) {
-            this.reports.set(participant.identity, msg.v);
-            this.emitStats();
-          }
-        } catch {
-          // ignore
-        }
+        this.handleData(payload, participant?.identity ?? "guest");
       });
       room.on(RoomEvent.Disconnected, () => {
         if (this.closed || this.room !== room) return;
@@ -324,8 +330,24 @@ export class StreamerBroadcast {
       await room.localParticipant.publishTrack(audio, {
         source: Track.Source.Microphone,
         name: "mic",
-        audioPreset: AudioPresets.musicHighQuality,
+        audioPreset: AudioPresets.music,
       });
+    }
+  }
+
+  private handleData(payload: Uint8Array, from: string) {
+    try {
+      const msg = JSON.parse(new TextDecoder().decode(payload)) as { t?: string; v?: string };
+      if (msg?.t === "report" && (msg.v === "ok" || msg.v === "bad")) {
+        this.reports.set(from, msg.v);
+        this.emitStats();
+        return;
+      }
+      if (msg?.t === "chat" && typeof msg.v === "string" && isChatId(msg.v)) {
+        this.onChat({ from, id: msg.v, label: chatLabel(msg.v) ?? msg.v, at: Date.now() });
+      }
+    } catch {
+      // ignore
     }
   }
 
@@ -349,15 +371,23 @@ export class ViewerSession {
   private everLive = false;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private backoffMs = 1500;
+  private lastChatAt = 0;
   private readonly onStream: (stream: MediaStream | null) => void;
   private readonly onStatus: (status: "waiting" | "live" | "reconnecting") => void;
+  private onChat: (line: ChatLine) => void;
 
   constructor(
     onStream: (stream: MediaStream | null) => void,
     onStatus: (status: "waiting" | "live" | "reconnecting") => void,
+    onChat: (line: ChatLine) => void = () => undefined,
   ) {
     this.onStream = onStream;
     this.onStatus = onStatus;
+    this.onChat = onChat;
+  }
+
+  setOnChat(fn: (line: ChatLine) => void) {
+    this.onChat = fn;
   }
 
   async startAudio() {
@@ -370,7 +400,23 @@ export class ViewerSession {
 
   setReport(value: "ok" | "bad") {
     this.report = value;
-    void this.sendReport();
+    void this.sendPayload({ t: "report", v: value });
+  }
+
+  sendChat(id: string) {
+    if (!isChatId(id)) return false;
+    const now = Date.now();
+    if (now - this.lastChatAt < 8000) return false;
+    this.lastChatAt = now;
+    const line: ChatLine = {
+      from: "you",
+      id,
+      label: chatLabel(id) ?? id,
+      at: now,
+    };
+    this.onChat(line);
+    void this.sendPayload({ t: "chat", v: id });
+    return true;
   }
 
   async start() {
@@ -391,7 +437,7 @@ export class ViewerSession {
       const creds = await fetchLiveToken("guest");
       if (this.closed) return;
       const room = new Room({
-        adaptiveStream: false,
+        adaptiveStream: true,
         dynacast: true,
         disconnectOnPageLeave: false,
       });
@@ -408,6 +454,22 @@ export class ViewerSession {
       );
       room.on(RoomEvent.TrackUnsubscribed, (track) => {
         this.detachRemote(track);
+      });
+      room.on(RoomEvent.DataReceived, (payload, participant) => {
+        if (this.closed) return;
+        try {
+          const msg = JSON.parse(new TextDecoder().decode(payload)) as { t?: string; v?: string };
+          if (msg?.t !== "chat" || typeof msg.v !== "string" || !isChatId(msg.v)) return;
+          const from = participant?.identity ?? "guest";
+          this.onChat({
+            from,
+            id: msg.v,
+            label: chatLabel(msg.v) ?? msg.v,
+            at: Date.now(),
+          });
+        } catch {
+          // ignore
+        }
       });
       room.on(RoomEvent.ParticipantDisconnected, (p: RemoteParticipant) => {
         if (isHostParticipant(p)) {
@@ -441,7 +503,7 @@ export class ViewerSession {
         return;
       }
       this.hydrateExisting();
-      await this.sendReport();
+      await this.sendPayload(this.report ? { t: "report", v: this.report } : null);
     } catch (err) {
       if (this.closed) return;
       if (err instanceof LiveConfigError && err.code === "not_configured") {
@@ -517,13 +579,12 @@ export class ViewerSession {
     this.onStream(new MediaStream(tracks));
   }
 
-  private async sendReport() {
-    if (!this.report || !this.room || this.room.state !== ConnectionState.Connected) return;
+  private async sendPayload(body: { t: string; v: string } | null) {
+    if (!body || !this.room || this.room.state !== ConnectionState.Connected) return;
     try {
-      await this.room.localParticipant.publishData(
-        new TextEncoder().encode(JSON.stringify({ t: "report", v: this.report })),
-        { reliable: true },
-      );
+      await this.room.localParticipant.publishData(new TextEncoder().encode(JSON.stringify(body)), {
+        reliable: true,
+      });
     } catch {
       // next reconnect
     }

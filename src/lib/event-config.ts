@@ -10,6 +10,6 @@ export const eventConfig = {
   kicker: env("VITE_KICKER", env("VITE_VENUE_LINE", "Live")),
   playbackUrl: env("VITE_PLAYBACK_URL", ""),
   hostPassword: env("VITE_HOST_PASSWORD", "vow"),
-  chatEnabled: env("VITE_CHAT_ENABLED", "false") === "true",
+  chatEnabled: env("VITE_CHAT_ENABLED", "true") === "true",
   roomId: env("VITE_ROOM_ID", "ceremony"),
 } as const;

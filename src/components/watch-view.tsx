@@ -19,10 +19,12 @@ export function WatchView() {
       <LivePlayer playback={playback} />
       <section className="mt-6 space-y-3 text-center">
         <p className="text-sm text-muted">
-          When the picture appears, tap for sound. Rotate for a larger view.
+          When the picture appears, tap for sound. Send a ready-made note below. Rotate for a
+          larger view.
         </p>
         <p className="text-xs leading-relaxed text-subtle">
-          If the picture pauses, stay on this page — it reconnects on its own.
+          If the picture pauses, stay on this page — it reconnects on its own. Picture or sound
+          issues go in Hub.
         </p>
       </section>
       <TabBar active="watch" />

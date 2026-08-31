@@ -11,6 +11,7 @@ import {
   StreamerBroadcast,
   hostPasswordFromSession,
   toggleTorch,
+  type ChatLine,
   type LiveStats,
 } from "@/lib/live-broadcast";
 import { LiveRecorder } from "@/lib/live-recorder";
@@ -83,6 +84,7 @@ export function GoLive() {
   const [chromeOn, setChromeOn] = useState(true);
   const [copied, setCopied] = useState(false);
   const [flipping, setFlipping] = useState(false);
+  const [chats, setChats] = useState<ChatLine[]>([]);
 
   const attach = (stream: MediaStream) => {
     const el = videoRef.current;
@@ -96,6 +98,7 @@ export function GoLive() {
   useEffect(() => {
     if (!runtime) return;
     runtime.broadcast.setOnViewers(setStats);
+    runtime.broadcast.setOnChat((line) => setChats((prev) => [...prev.slice(-7), line]));
     attach(runtime.stream);
     setFacing(runtime.facing);
     setTorch(cameraHasTorch(runtime.stream));
@@ -143,6 +146,7 @@ export function GoLive() {
     setTorch(false);
     setTorchOn(false);
     setChromeOn(true);
+    setChats([]);
     void stashClip(rec);
   };
 
@@ -153,7 +157,12 @@ export function GoLive() {
       const password = hostPasswordFromSession();
       const stream = await openCamera(facing);
       attach(stream);
-      const session = new StreamerBroadcast(stream, setStats, password);
+      const session = new StreamerBroadcast(
+        stream,
+        setStats,
+        password,
+        (line) => setChats((prev) => [...prev.slice(-7), line]),
+      );
       const recorder = new LiveRecorder();
       recorder.start(stream);
       runtime = { broadcast: session, stream, facing, recorder };
@@ -275,6 +284,11 @@ export function GoLive() {
               {stats.ok ? ` · ${stats.ok} clear` : ""}
               {stats.trouble ? ` · ${stats.trouble} trouble` : ""}
             </p>
+            {chats.length ? (
+              <p className="text-center text-sm text-accent">
+                {chats[chats.length - 1]?.label}
+              </p>
+            ) : null}
             {error ? (
               <p className="rounded-md bg-bg/80 px-3 py-2 text-center text-sm text-warn">{error}</p>
             ) : null}

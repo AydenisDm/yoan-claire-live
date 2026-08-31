@@ -2,7 +2,7 @@ export const HOST_IDENTITY = "streamer";
 export const HOST_GATE_KEY = "vows-host-ok";
 export const HOST_PW_KEY = "vows-host-pw";
 export const GUEST_ID_KEY = "vows-guest-id";
-export const MAX_VIEWERS = 80;
+export const MAX_VIEWERS = 220;
 export const PRODUCTION_LIVE_API = "https://yoan-claire-live.vercel.app/api/live";
 
 export function liveRoomName(roomId: string) {

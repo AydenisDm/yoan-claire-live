@@ -8,6 +8,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { WaitingRoom } from "@/components/waiting-room";
+import { GuestChat } from "@/components/guest-chat";
+import { type ChatLine } from "@/lib/crowd";
 import { type Playback } from "@/lib/playback";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +19,7 @@ type ViewerHandle = {
   start: () => Promise<void>;
   stop: () => void;
   setReport: (value: "ok" | "bad") => void;
+  sendChat: (id: string) => boolean;
   startAudio: () => Promise<void>;
 };
 
@@ -119,6 +122,7 @@ function WebRtcViewer() {
   const [status, setStatus] = useState<Status>("waiting");
   const [muted, setMuted] = useState(true);
   const [report, setReport] = useState<"ok" | "bad" | null>(null);
+  const [chats, setChats] = useState<ChatLine[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -132,6 +136,7 @@ function WebRtcViewer() {
           if (stream) void video.play().catch(() => undefined);
         },
         (next) => setStatus(next),
+        (line) => setChats((prev) => [...prev.slice(-19), line]),
       );
       sessionRef.current = session;
       void session.start();
@@ -196,6 +201,14 @@ function WebRtcViewer() {
           />
         </div>
       </PlayerShell>
+      {status === "live" ? (
+        <div className="mt-4">
+          <GuestChat
+            lines={chats}
+            onSend={(id) => sessionRef.current?.sendChat(id) ?? false}
+          />
+        </div>
+      ) : null}
       {status === "live" && !muted && report === null ? (
         <div className="mt-4 rounded-xl border border-border bg-surface p-4 text-center">
           <p className="font-serif text-lg text-fg">Can you see and hear clearly?</p>
