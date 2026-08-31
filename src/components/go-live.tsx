@@ -1,14 +1,8 @@
-import {
-  Copy,
-  Flashlight,
-  FlashlightOff,
-  FlipHorizontal2,
-  Radio,
-  Square,
-} from "lucide-react";
+import { Copy, Flashlight, FlashlightOff, FlipHorizontal2, Radio, Square } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { saveClipBlob } from "@/lib/archive-db";
 import {
   LiveConfigError,
   cameraHasTorch,
@@ -19,12 +13,15 @@ import {
   toggleTorch,
   type LiveStats,
 } from "@/lib/live-broadcast";
+import { LiveRecorder } from "@/lib/live-recorder";
+import { addRecording } from "@/lib/recordings";
 import { cn } from "@/lib/utils";
 
 type Runtime = {
   broadcast: StreamerBroadcast;
   stream: MediaStream;
   facing: "environment" | "user";
+  recorder: LiveRecorder;
 };
 
 let runtime: Runtime | null = null;
@@ -34,7 +31,7 @@ async function keepAwake() {
   try {
     await navigator.wakeLock.request("screen");
   } catch {
-    // ignore
+    // iOS Safari has no Wake Lock
   }
 }
 
@@ -45,6 +42,33 @@ function errorCopy(err: unknown) {
     return "Allow camera and microphone, then try Go live again.";
   }
   return "Could not start the live picture. Try Go live again.";
+}
+
+async function stashClip(recorder: LiveRecorder | null) {
+  if (!recorder) return;
+  try {
+    const clip = await recorder.stop();
+    if (!clip) return;
+    const id = crypto.randomUUID();
+    await saveClipBlob(id, clip.blob);
+    const title = new Date().toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+    await addRecording({
+      data: {
+        id,
+        title,
+        durationMs: clip.durationMs,
+        sizeBytes: clip.blob.size,
+        mime: clip.mime,
+      },
+    });
+  } catch {
+    // live already stopped; archive is best-effort
+  }
 }
 
 export function GoLive() {
@@ -64,6 +88,8 @@ export function GoLive() {
     const el = videoRef.current;
     if (!el) return;
     el.srcObject = stream;
+    el.setAttribute("playsinline", "true");
+    el.setAttribute("webkit-playsinline", "true");
     void el.play().catch(() => undefined);
   };
 
@@ -107,6 +133,7 @@ export function GoLive() {
   }, [live]);
 
   const stopAll = () => {
+    const rec = runtime?.recorder ?? null;
     runtime?.broadcast.stop();
     runtime?.stream.getTracks().forEach((t) => t.stop());
     runtime = null;
@@ -116,6 +143,7 @@ export function GoLive() {
     setTorch(false);
     setTorchOn(false);
     setChromeOn(true);
+    void stashClip(rec);
   };
 
   const goLive = async () => {
@@ -126,7 +154,9 @@ export function GoLive() {
       const stream = await openCamera(facing);
       attach(stream);
       const session = new StreamerBroadcast(stream, setStats, password);
-      runtime = { broadcast: session, stream, facing };
+      const recorder = new LiveRecorder();
+      recorder.start(stream);
+      runtime = { broadcast: session, stream, facing, recorder };
       await session.start();
       await keepAwake();
       setTorch(cameraHasTorch(stream));
@@ -202,17 +232,18 @@ export function GoLive() {
   const preview = (
     <video
       ref={videoRef}
-      className={cn("h-full w-full object-cover", facing === "user" && "scale-x-[-1]")}
+      className={cn("live-video h-full w-full object-cover", facing === "user" && "scale-x-[-1]")}
       playsInline
       muted
       autoPlay
       disablePictureInPicture
+      controls={false}
     />
   );
 
   if (live) {
     return (
-      <div className="fixed inset-0 z-50 bg-bg" onClick={() => setChromeOn(true)}>
+      <div className="live-stage fixed inset-0 z-50 bg-bg" onClick={() => setChromeOn(true)}>
         <div className="absolute inset-0">{preview}</div>
         <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-3 bg-gradient-to-b from-bg/80 to-transparent p-4 pt-[max(1rem,env(safe-area-inset-top))]">
           <Badge tone="live">
@@ -222,7 +253,7 @@ export function GoLive() {
           <Button
             type="button"
             variant="secondary"
-            className="pointer-events-auto"
+            className="pointer-events-auto min-h-11"
             onClick={(e) => {
               e.stopPropagation();
               stopAll();
@@ -234,7 +265,7 @@ export function GoLive() {
         </div>
         <div
           className={cn(
-            "absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-bg/90 via-bg/70 to-transparent p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-10 transition-opacity duration-200",
+            "absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-bg/90 via-bg/70 to-transparent p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-10",
             chromeOn ? "opacity-100" : "pointer-events-none opacity-0",
           )}
         >
@@ -245,9 +276,7 @@ export function GoLive() {
               {stats.trouble ? ` · ${stats.trouble} trouble` : ""}
             </p>
             {error ? (
-              <p className="rounded-md bg-bg/80 px-3 py-2 text-center text-sm text-warn">
-                {error}
-              </p>
+              <p className="rounded-md bg-bg/80 px-3 py-2 text-center text-sm text-warn">{error}</p>
             ) : null}
             <div className="flex flex-wrap items-center justify-center gap-2">
               <Button type="button" variant="secondary" disabled={flipping} onClick={() => void flip()}>
@@ -276,8 +305,7 @@ export function GoLive() {
       <div className="px-5 pt-6 pb-2 text-center sm:px-6">
         <p className="font-serif text-2xl text-fg">Ready when you are</p>
         <p className="mx-auto mt-2 max-w-sm text-sm text-muted">
-          One tap fills this phone’s screen. Guests only watch the link. Keep the tab open
-          and the phone plugged in.
+          Go live fills this phone. Stopping saves a clip to Archive. Keep the tab open.
         </p>
       </div>
       {error ? <p className="px-5 pt-3 text-sm text-warn">{error}</p> : null}

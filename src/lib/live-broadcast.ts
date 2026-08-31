@@ -1,16 +1,4 @@
-import {
-  AudioPresets,
-  ConnectionState,
-  Room,
-  RoomEvent,
-  Track,
-  VideoPresets,
-  VideoQuality,
-  type LocalTrackPublication,
-  type RemoteParticipant,
-  type RemoteTrack,
-  type RemoteTrackPublication,
-} from "livekit-client";
+import { AudioPresets, ConnectionState, Room, RoomEvent, Track, VideoPresets, VideoQuality, type LocalTrackPublication, type RemoteParticipant, type RemoteTrack, type RemoteTrackPublication } from "livekit-client";
 import { HOST_IDENTITY, HOST_PW_KEY, PRODUCTION_LIVE_API, guestIdentity } from "@/lib/live-config";
 
 export type LiveStats = {
@@ -74,9 +62,17 @@ async function fetchLiveToken(role: "host" | "guest", password?: string): Promis
 }
 
 async function mintToken(endpoint: string, payload: object): Promise<TokenResponse> {
+  const headers: Record<string, string> = { "content-type": "application/json" };
+  try {
+    const bearer = sessionStorage.getItem("grok-auth.bearer-token");
+    if (bearer) headers.authorization = `Bearer ${bearer}`;
+  } catch {
+    // ignore
+  }
   const res = await fetch(endpoint, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    credentials: "include",
+    headers,
     body: JSON.stringify(payload),
   });
   let body: { error?: string } & Partial<TokenResponse> = {};

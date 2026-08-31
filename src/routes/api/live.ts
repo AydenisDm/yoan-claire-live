@@ -87,8 +87,17 @@ async function handlePost(request: Request) {
   if (!parsed.success) return json({ error: "invalid" }, 400);
 
   const { role, password, identity: guestId, check } = parsed.data;
-  if (role === "host" && password !== hostPassword()) {
-    return json({ error: "unauthorized" }, 401);
+  if (role === "host") {
+    let signedIn = false;
+    try {
+      const { getSessionUser } = await import("@/lib/auth/verify.server");
+      signedIn = Boolean(await getSessionUser());
+    } catch {
+      signedIn = false;
+    }
+    if (!signedIn && password !== hostPassword()) {
+      return json({ error: "unauthorized" }, 401);
+    }
   }
   if (check) {
     if (env.ok) return json({ ok: true, configured: true });
