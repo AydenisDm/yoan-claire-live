@@ -10,13 +10,28 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ArchiveRouteImport } from './routes/archive'
+import { Route as FeedbackRouteImport } from './routes/feedback'
 import { Route as HostRouteImport } from './routes/host'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as WatchRouteImport } from './routes/watch'
+import { Route as ApiLiveRouteImport } from './routes/api/live'
 import { Route as ApiRtcRouteImport } from './routes/api/rtc'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ArchiveRoute = ArchiveRouteImport.update({
+  id: '/archive',
+  path: '/archive',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedbackRoute = FeedbackRouteImport.update({
+  id: '/feedback',
+  path: '/feedback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HostRoute = HostRouteImport.update({
@@ -24,9 +39,19 @@ const HostRoute = HostRouteImport.update({
   path: '/host',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WatchRoute = WatchRouteImport.update({
   id: '/watch',
   path: '/watch',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiLiveRoute = ApiLiveRouteImport.update({
+  id: '/api/live',
+  path: '/api/live',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiRtcRoute = ApiRtcRouteImport.update({
@@ -34,39 +59,92 @@ const ApiRtcRoute = ApiRtcRouteImport.update({
   path: '/api/rtc',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/archive': typeof ArchiveRoute
+  '/feedback': typeof FeedbackRoute
   '/host': typeof HostRoute
+  '/login': typeof LoginRoute
   '/watch': typeof WatchRoute
+  '/api/live': typeof ApiLiveRoute
   '/api/rtc': typeof ApiRtcRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/archive': typeof ArchiveRoute
+  '/feedback': typeof FeedbackRoute
   '/host': typeof HostRoute
+  '/login': typeof LoginRoute
   '/watch': typeof WatchRoute
+  '/api/live': typeof ApiLiveRoute
   '/api/rtc': typeof ApiRtcRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/archive': typeof ArchiveRoute
+  '/feedback': typeof FeedbackRoute
   '/host': typeof HostRoute
+  '/login': typeof LoginRoute
   '/watch': typeof WatchRoute
+  '/api/live': typeof ApiLiveRoute
   '/api/rtc': typeof ApiRtcRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/host' | '/watch' | '/api/rtc'
+  fullPaths:
+    | '/'
+    | '/archive'
+    | '/feedback'
+    | '/host'
+    | '/login'
+    | '/watch'
+    | '/api/live'
+    | '/api/rtc'
+    | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/host' | '/watch' | '/api/rtc'
-  id: '__root__' | '/' | '/host' | '/watch' | '/api/rtc'
+  to:
+    | '/'
+    | '/archive'
+    | '/feedback'
+    | '/host'
+    | '/login'
+    | '/watch'
+    | '/api/live'
+    | '/api/rtc'
+    | '/api/auth/$'
+  id:
+    | '__root__'
+    | '/'
+    | '/archive'
+    | '/feedback'
+    | '/host'
+    | '/login'
+    | '/watch'
+    | '/api/live'
+    | '/api/rtc'
+    | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ArchiveRoute: typeof ArchiveRoute
+  FeedbackRoute: typeof FeedbackRoute
   HostRoute: typeof HostRoute
+  LoginRoute: typeof LoginRoute
   WatchRoute: typeof WatchRoute
+  ApiLiveRoute: typeof ApiLiveRoute
   ApiRtcRoute: typeof ApiRtcRoute
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -78,11 +156,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/archive': {
+      id: '/archive'
+      path: '/archive'
+      fullPath: '/archive'
+      preLoaderRoute: typeof ArchiveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feedback': {
+      id: '/feedback'
+      path: '/feedback'
+      fullPath: '/feedback'
+      preLoaderRoute: typeof FeedbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/host': {
       id: '/host'
       path: '/host'
       fullPath: '/host'
       preLoaderRoute: typeof HostRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/watch': {
@@ -92,6 +191,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WatchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/live': {
+      id: '/api/live'
+      path: '/api/live'
+      fullPath: '/api/live'
+      preLoaderRoute: typeof ApiLiveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/rtc': {
       id: '/api/rtc'
       path: '/api/rtc'
@@ -99,14 +205,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiRtcRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ArchiveRoute: ArchiveRoute,
+  FeedbackRoute: FeedbackRoute,
   HostRoute: HostRoute,
+  LoginRoute: LoginRoute,
   WatchRoute: WatchRoute,
+  ApiLiveRoute: ApiLiveRoute,
   ApiRtcRoute: ApiRtcRoute,
+  ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

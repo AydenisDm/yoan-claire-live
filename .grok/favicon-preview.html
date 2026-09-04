@@ -1,13 +1,31 @@
 <!doctype html>
-<meta charset="utf-8">
-<style>
-  html, body { margin: 0; padding: 0; background: #ddd; }
-  .row { display: flex; gap: 8px; padding: 8px; align-items: end; }
-  img { display: block; image-rendering: auto; }
-</style>
+<html><head><style>
+html,body{margin:0;background:#666}
+.row{display:flex;gap:24px;padding:24px;align-items:flex-end}
+.tile{background:#0e0f12;display:flex;align-items:center;justify-content:center}
+</style></head>
+<body>
 <div class="row">
-  <img src="file:///workspace/public/favicon.svg" width="16" height="16" alt="16">
-  <img src="file:///workspace/public/favicon.svg" width="32" height="32" alt="32">
-  <img src="file:///workspace/public/favicon.svg" width="64" height="64" alt="64">
-  <img src="file:///workspace/public/favicon.svg" width="128" height="128" alt="128">
+  <div class="tile" style="width:16px;height:16px"><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#0e0f12"/>
+  <circle cx="16" cy="16" r="9.5" fill="none" stroke="#e8e4dc" stroke-width="1.8"/>
+  <circle cx="16" cy="16" r="6.2" fill="none" stroke="#e8e4dc" stroke-width="0.9" opacity="0.45"/>
+  <circle cx="16" cy="16" r="2.4" fill="#ef4444"/>
+</svg>
 </div>
+  <div class="tile" style="width:32px;height:32px"><svg width="32" height="32" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#0e0f12"/>
+  <circle cx="16" cy="16" r="9.5" fill="none" stroke="#e8e4dc" stroke-width="1.8"/>
+  <circle cx="16" cy="16" r="6.2" fill="none" stroke="#e8e4dc" stroke-width="0.9" opacity="0.45"/>
+  <circle cx="16" cy="16" r="2.4" fill="#ef4444"/>
+</svg>
+</div>
+  <div class="tile" style="width:64px;height:64px"><svg width="64" height="64" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#0e0f12"/>
+  <circle cx="16" cy="16" r="9.5" fill="none" stroke="#e8e4dc" stroke-width="1.8"/>
+  <circle cx="16" cy="16" r="6.2" fill="none" stroke="#e8e4dc" stroke-width="0.9" opacity="0.45"/>
+  <circle cx="16" cy="16" r="2.4" fill="#ef4444"/>
+</svg>
+</div>
+</div>
+</body></html>

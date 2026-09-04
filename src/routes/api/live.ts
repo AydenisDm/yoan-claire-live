@@ -52,7 +52,7 @@ async function proxyProduction(init?: RequestInit) {
       ...init,
       headers: {
         "content-type": "application/json",
-        "x-eventstream-proxy": "1",
+        "x-eventview-proxy": "1",
         ...(init?.headers ?? {}),
       },
     });
@@ -165,7 +165,7 @@ async function handle(request: Request) {
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: CORS });
     }
-    if (request.headers.get("x-eventstream-proxy") === "1" && !livekitEnv().ok) {
+    if (request.headers.get("x-eventview-proxy") === "1" && !livekitEnv().ok) {
       return json({ error: "not_configured", configured: false });
     }
     if (request.method === "GET") return await handleGet();

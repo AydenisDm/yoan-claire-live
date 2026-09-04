@@ -1,4 +1,4 @@
-const DB_NAME = "eventstream-archive";
+const DB_NAME = "eventview-archive";
 const STORE = "clips";
 
 function openDb(): Promise<IDBDatabase> {
