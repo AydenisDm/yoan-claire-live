@@ -17,7 +17,10 @@ export const Route = createRootRoute({
       },
       {
         name: "description",
-        content: `Watch ${eventConfig.eventName} live on ${eventConfig.productName}. No account needed.`,
+        content:
+          eventConfig.eventName === eventConfig.productName
+            ? `Watch live on ${eventConfig.productName}. No account needed.`
+            : `Watch ${eventConfig.eventName} live on ${eventConfig.productName}. No account needed.`,
       },
       { name: "theme-color", content: "#0e0f12" },
       { name: "apple-mobile-web-app-capable", content: "yes" },

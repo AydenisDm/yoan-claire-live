@@ -92,7 +92,7 @@ This fits Vercel hosting: the site only mints short-lived room tokens (`LIVEKIT_
 - `LIVEKIT_API_SECRET`
 - Optional: `HOST_PASSWORD` — fallback host gate if you want a secret that is not in the page
 
-Optional labels: `VITE_EVENT_NAME`, `VITE_EVENT_DATE`, `VITE_KICKER`, `VITE_PRODUCT_NAME`.
+Optional labels: `VITE_EVENT_NAME`, `VITE_EVENT_DATE`, `VITE_KICKER`. Override the product name with `VITE_PRODUCT_NAME` if needed. Preview environments can point at the production token API with `VITE_PRODUCTION_ORIGIN`.
 
 ### Cost / ops (brief)
 

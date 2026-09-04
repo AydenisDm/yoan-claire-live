@@ -38,7 +38,7 @@ export function guestIdentity() {
     return `g-${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`;
   }
   let id = sessionStorage.getItem(GUEST_ID_KEY);
-  if (!id || !/^g-[a-zA-Z0-9_-]{6,32}$/.test(id)) {
+  if (!id || !/^g-[a-z0-9_-]{6,32}$/i.test(id)) {
     id = `g-${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`;
     sessionStorage.setItem(GUEST_ID_KEY, id);
   }

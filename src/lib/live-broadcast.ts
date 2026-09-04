@@ -1,5 +1,6 @@
 import { AudioPresets, ConnectionState, Room, RoomEvent, Track, VideoPresets, VideoQuality, type LocalTrackPublication, type RemoteParticipant, type RemoteTrack, type RemoteTrackPublication } from "livekit-client";
 import { chatLabel, isChatId, type ChatLine } from "@/lib/crowd";
+import { eventConfig } from "@/lib/event-config";
 import {
   HOST_IDENTITY,
   HOST_PW_KEY,
@@ -180,7 +181,7 @@ export async function copyWatchLink() {
   } catch {
     if (typeof navigator.share !== "function") return "failed" as const;
     try {
-      await navigator.share({ title: "Watch live", url });
+      await navigator.share({ title: `Watch on ${eventConfig.productName}`, url });
       return "shared" as const;
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") return "cancelled" as const;
