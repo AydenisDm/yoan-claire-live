@@ -17,14 +17,17 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import pg from "pg";
 import { pendingMigrations } from "./migration-plan.mjs";
+import { DATABASE_URL_KEYS, resolveDatabaseUrl } from "./database-url.mjs";
 
-const databaseUrl = process.env.DATABASE_URL;
+const { url: databaseUrl, key: databaseUrlKey } = resolveDatabaseUrl();
 if (!databaseUrl) {
   console.log(
-    "[migrate] DATABASE_URL not set — skipping (the PGLite fallback migrates itself).",
+    `[migrate] no Postgres URL (${DATABASE_URL_KEYS.join(", ")}) — skipping. ` +
+      "On Vercel, set DATABASE_URL (or POSTGRES_URL) for Production and Preview.",
   );
   process.exit(0);
 }
+console.log(`[migrate] using ${databaseUrlKey}`);
 
 const migrationsDir = join(dirname(fileURLToPath(import.meta.url)), "..", "migrations");
 

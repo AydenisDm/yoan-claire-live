@@ -1,4 +1,4 @@
-import { dbSource, ensureDbReady, getSql, vercelRuntime } from "../db";
+import { dbSource, ensureDbReady, getSql, postgresUrl, vercelRuntime } from "../db";
 import { emailAndPasswordEnabled } from "./email-password";
 import { PREVIEW_CLIENT_ID } from "./preview";
 import { resolveAuthSecret } from "./secret";
@@ -10,7 +10,7 @@ const env = (key: string): string | undefined => {
 };
 
 const MISSING_DB =
-  "This site cannot save accounts yet. Add a Postgres DATABASE_URL and a BETTER_AUTH_SECRET in the Vercel project (Production and Preview), then redeploy.";
+  "This site cannot save accounts yet. Add a Postgres DATABASE_URL (or POSTGRES_URL) and a BETTER_AUTH_SECRET in the Vercel project (Production and Preview), then redeploy.";
 
 const DB_ERROR =
   "The account database is not reachable. Check DATABASE_URL on Vercel, confirm the auth tables exist, and redeploy.";
@@ -34,7 +34,7 @@ function onVercel(): boolean {
 }
 
 function hasDatabaseUrl(): boolean {
-  return Boolean(env("DATABASE_URL"));
+  return Boolean(postgresUrl);
 }
 
 const globalRef = globalThis as typeof globalThis & {

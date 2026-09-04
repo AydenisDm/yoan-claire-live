@@ -1,14 +1,13 @@
 import { pendingMigrations } from "../../scripts/migration-plan.mjs";
+import { resolveDatabaseUrl } from "../../scripts/database-url.mjs";
 
 /** Which database backend is active. */
 export type DbSource = "neon" | "pglite";
 
-// An empty/whitespace DATABASE_URL (an easy misconfig in deploy UIs) must mean
-// "unset" — otherwise production would silently run on the PGLite fallback.
-const rawDatabaseUrl =
-  typeof process !== "undefined" ? process.env.DATABASE_URL : undefined;
-const databaseUrl =
-  rawDatabaseUrl && rawDatabaseUrl.trim() ? rawDatabaseUrl : undefined;
+const resolvedDatabase = resolveDatabaseUrl(
+  typeof process !== "undefined" ? process.env : {},
+);
+const databaseUrl = resolvedDatabase.url;
 
 function runningInVercelBundle(): boolean {
   if (typeof process !== "undefined" && (process.env.VERCEL || process.env.VERCEL_ENV)) {
@@ -27,6 +26,12 @@ function runningInVercelBundle(): boolean {
  * and instantiating it kills the process with an uncaught ENOENT.
  */
 export const vercelRuntime = runningInVercelBundle();
+
+/** Env var name that supplied the Postgres URL, if any. */
+export const databaseUrlKey = resolvedDatabase.key;
+
+/** Resolved Postgres URL (DATABASE_URL or Vercel/Neon aliases). */
+export const postgresUrl = databaseUrl;
 
 /**
  * Active backend: real **Neon** when `DATABASE_URL` is set (deployed / configured
@@ -209,7 +214,7 @@ async function createSql(): Promise<Sql> {
   if (dbSource === "neon") return createNeonSql();
   if (vercelRuntime) {
     throw new Error(
-      "DATABASE_URL is required on Vercel for accounts. Add a Postgres DATABASE_URL in the Vercel project (Production and Preview), then redeploy.",
+      "A Postgres URL is required on Vercel for accounts. Set DATABASE_URL or POSTGRES_URL in the Vercel project (Production and Preview), then redeploy.",
     );
   }
   return createPgliteSql();

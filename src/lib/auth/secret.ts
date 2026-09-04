@@ -1,3 +1,4 @@
+import { resolveDatabaseUrl } from "../../../scripts/database-url.mjs";
 import { createHash } from "node:crypto";
 
 export type EnvMap = Record<string, string | undefined>;
@@ -20,7 +21,7 @@ export function resolveAuthSecret(
   const explicit = source.BETTER_AUTH_SECRET?.trim();
   if (explicit) return { secret: explicit, stable: true };
 
-  const databaseUrl = source.DATABASE_URL?.trim();
+  const databaseUrl = resolveDatabaseUrl(source).url;
   if (databaseUrl) {
     return {
       secret: createHash("sha256")

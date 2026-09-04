@@ -38,7 +38,7 @@ Set these for **Production and Preview**, then **redeploy**. Never put them in t
 
 | Var | Required | Purpose |
 |---|---|---|
-| `DATABASE_URL` | **Yes** | Postgres (Neon) for users and sessions. Without it, Create account cannot work on Vercel. |
+| `DATABASE_URL` or `POSTGRES_URL` | **Yes** | Postgres (Neon). Without it, Create account cannot work on Vercel. |
 | `BETTER_AUTH_SECRET` | **Yes** (strongly) | Signs session cookies. Use a long random string. If omitted, the app derives a stable key from `DATABASE_URL` so lambdas still agree. |
 | `BETTER_AUTH_URL` | Optional | Public origin fallback (e.g. `https://yoan-claire-live.vercel.app`) |
 | `AUTH_ALLOWED_HOSTS` | Optional | Extra hosts |
@@ -63,7 +63,7 @@ Password Protection / Trusted IPs, if enabled, will also block testers.
 1. Open `/register` on the preview. You should see the form (not a “accounts are not ready” setup card).
 2. Create an account → you land on **Live**, signed in.
 3. Sign out, open `/login`, sign in with the same email → Live again.
-4. If you see the setup card, `DATABASE_URL` is missing on that Vercel environment.
+4. If you see the setup card, this Vercel environment has no Postgres URL (`DATABASE_URL` or `POSTGRES_URL`).
 
 ## Streamer, on the day
 

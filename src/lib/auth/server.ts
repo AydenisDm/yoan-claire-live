@@ -35,7 +35,7 @@ import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { getCookie } from "@tanstack/react-start/server";
 import { randomBytes } from "node:crypto";
 import { Pool } from "pg";
-import { ensureDbReady, getPglite, vercelRuntime } from "../db";
+import { ensureDbReady, getPglite, postgresUrl, vercelRuntime } from "../db";
 import { emailAndPasswordEnabled } from "./email-password";
 import { GATE_PROVIDER_ID, gateIdentitySessions } from "./gate-session.server";
 import { GROK_PROVIDERS } from "./providers";
@@ -55,7 +55,7 @@ import {
 // Kick DB bootstrap as soon as the auth server module loads — except on the
 // Vercel bundle with no DATABASE_URL, where PGLite is unavailable and would
 // crash the process (empty HTTP 500 / dead preview).
-if (!(vercelRuntime && !process.env.DATABASE_URL?.trim())) {
+if (!(vercelRuntime && !postgresUrl)) {
   void ensureDbReady().catch((err) => {
     console.error("[auth] database bootstrap failed:", err);
   });
@@ -121,7 +121,7 @@ const trustedOrigins = async (request?: Request) => [
   ...requestTrustedOrigins(request),
 ];
 
-const databaseUrl = env("DATABASE_URL");
+const databaseUrl = postgresUrl;
 const authSecret = resolveAuthSecret(process.env, previewAuthSecret);
 
 // Static broker OAuth endpoints (skip OIDC discovery on every sign-in / callback).

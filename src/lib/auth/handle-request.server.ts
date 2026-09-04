@@ -43,6 +43,12 @@ export async function handleAuthRequest(request: Request): Promise<Response> {
 
   try {
     await ensureDbReady();
+    console.info(
+      "[auth]",
+      request.method,
+      url.pathname,
+      "db=" + (setup.persist || "none"),
+    );
     const response = await auth.handler(request);
     if (response.status < 500) return response;
 

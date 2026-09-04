@@ -2,7 +2,7 @@ import type { AuthSetupStatus } from "@/lib/auth/status";
 
 const VERCEL_STEPS = [
   "Open the Vercel project → Settings → Environment Variables.",
-  "Set DATABASE_URL to a Postgres URL (Neon is fine). Enable it for Production and Preview.",
+  "Set DATABASE_URL (or POSTGRES_URL) to a Postgres URL (Neon is fine). Enable it for Production and Preview.",
   "Set BETTER_AUTH_SECRET to a long random string. Same environments.",
   "Redeploy the Preview (and Production) so the new values load.",
 ];
