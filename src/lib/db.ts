@@ -10,6 +10,24 @@ const rawDatabaseUrl =
 const databaseUrl =
   rawDatabaseUrl && rawDatabaseUrl.trim() ? rawDatabaseUrl : undefined;
 
+function runningInVercelBundle(): boolean {
+  if (typeof process !== "undefined" && (process.env.VERCEL || process.env.VERCEL_ENV)) {
+    return true;
+  }
+  if (typeof import.meta !== "undefined" && typeof import.meta.url === "string") {
+    const here = import.meta.url;
+    return here.includes(".vercel/output") || here.includes("__server.func");
+  }
+  return false;
+}
+
+/**
+ * True on Vercel (including `vite preview` of the Nitro/Vercel output). PGLite
+ * is not shipped as a working WASM database there — `pglite.data` is missing
+ * and instantiating it kills the process with an uncaught ENOENT.
+ */
+export const vercelRuntime = runningInVercelBundle();
+
 /**
  * Active backend: real **Neon** when `DATABASE_URL` is set (deployed / configured
  * sandbox), otherwise a local embedded **PGLite** (Postgres compiled to WASM) so
@@ -189,7 +207,7 @@ async function createSql(): Promise<Sql> {
     );
   }
   if (dbSource === "neon") return createNeonSql();
-  if (process.env.VERCEL) {
+  if (vercelRuntime) {
     throw new Error(
       "DATABASE_URL is required on Vercel for accounts. Add a Postgres DATABASE_URL in the Vercel project (Production and Preview), then redeploy.",
     );
@@ -290,10 +308,13 @@ export function ensureDbReady(): Promise<void> {
 const globalBoot = globalThis as typeof globalThis & {
   __pgBootstrapPromise__?: Promise<void>;
 };
-if (typeof window === "undefined" && dbSource === "pglite" && !process.env.VERCEL) {
+if (typeof window === "undefined" && dbSource === "pglite" && !vercelRuntime) {
   globalBoot.__pgBootstrapPromise__ ??= ensureDbReady().catch((err) => {
     globalBoot.__pgBootstrapPromise__ = undefined;
     console.error("[db] PGLite bootstrap failed:", err);
-    throw err;
+    // Do not rethrow. An uncaught rejection kills the Node process — that is
+    // the empty-500 / dead-preview failure on the Vercel output (no pglite.data
+    // in the serverless bundle). Callers of getSql()/ensureDbReady still see
+    // the error; the HTTP server stays up to show the setup screen.
   });
 }

@@ -1,4 +1,4 @@
-import { dbSource, ensureDbReady, getSql } from "../db";
+import { dbSource, ensureDbReady, getSql, vercelRuntime } from "../db";
 import { emailAndPasswordEnabled } from "./email-password";
 import { PREVIEW_CLIENT_ID } from "./preview";
 import { resolveAuthSecret } from "./secret";
@@ -30,7 +30,7 @@ function requestHost(request?: Request): string {
 }
 
 function onVercel(): boolean {
-  return Boolean(env("VERCEL"));
+  return Boolean(env("VERCEL") || env("VERCEL_ENV")) || vercelRuntime;
 }
 
 function hasDatabaseUrl(): boolean {

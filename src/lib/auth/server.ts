@@ -35,7 +35,7 @@ import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { getCookie } from "@tanstack/react-start/server";
 import { randomBytes } from "node:crypto";
 import { Pool } from "pg";
-import { ensureDbReady, getPglite } from "../db";
+import { ensureDbReady, getPglite, vercelRuntime } from "../db";
 import { emailAndPasswordEnabled } from "./email-password";
 import { GATE_PROVIDER_ID, gateIdentitySessions } from "./gate-session.server";
 import { GROK_PROVIDERS } from "./providers";
@@ -52,12 +52,14 @@ import {
   PREVIEW_CLIENT_SECRET,
 } from "./preview";
 
-// Kick (and share) DB bootstrap as soon as the auth server module loads.
-// Must catch: on Vercel without DATABASE_URL this rejects, and an unhandled
-// rejection used to crash sign-up with an empty HTTP 500.
-void ensureDbReady().catch((err) => {
-  console.error("[auth] database bootstrap failed:", err);
-});
+// Kick DB bootstrap as soon as the auth server module loads — except on the
+// Vercel bundle with no DATABASE_URL, where PGLite is unavailable and would
+// crash the process (empty HTTP 500 / dead preview).
+if (!(vercelRuntime && !process.env.DATABASE_URL?.trim())) {
+  void ensureDbReady().catch((err) => {
+    console.error("[auth] database bootstrap failed:", err);
+  });
+}
 
 /**
  * Preview secret must outlive module reloads: PGLite (and its session rows) is
