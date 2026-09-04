@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ArchiveRouteImport } from './routes/archive'
 import { Route as FeedbackRouteImport } from './routes/feedback'
+import { Route as ForgotRouteImport } from './routes/forgot'
 import { Route as HostRouteImport } from './routes/host'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
@@ -33,6 +34,11 @@ const ArchiveRoute = ArchiveRouteImport.update({
 const FeedbackRoute = FeedbackRouteImport.update({
   id: '/feedback',
   path: '/feedback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotRoute = ForgotRouteImport.update({
+  id: '/forgot',
+  path: '/forgot',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HostRoute = HostRouteImport.update({
@@ -75,6 +81,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/archive': typeof ArchiveRoute
   '/feedback': typeof FeedbackRoute
+  '/forgot': typeof ForgotRoute
   '/host': typeof HostRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
@@ -87,6 +94,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/archive': typeof ArchiveRoute
   '/feedback': typeof FeedbackRoute
+  '/forgot': typeof ForgotRoute
   '/host': typeof HostRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
@@ -100,6 +108,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/archive': typeof ArchiveRoute
   '/feedback': typeof FeedbackRoute
+  '/forgot': typeof ForgotRoute
   '/host': typeof HostRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
@@ -114,6 +123,7 @@ export interface FileRouteTypes {
     | '/'
     | '/archive'
     | '/feedback'
+    | '/forgot'
     | '/host'
     | '/login'
     | '/register'
@@ -126,6 +136,7 @@ export interface FileRouteTypes {
     | '/'
     | '/archive'
     | '/feedback'
+    | '/forgot'
     | '/host'
     | '/login'
     | '/register'
@@ -138,6 +149,7 @@ export interface FileRouteTypes {
     | '/'
     | '/archive'
     | '/feedback'
+    | '/forgot'
     | '/host'
     | '/login'
     | '/register'
@@ -151,6 +163,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ArchiveRoute: typeof ArchiveRoute
   FeedbackRoute: typeof FeedbackRoute
+  ForgotRoute: typeof ForgotRoute
   HostRoute: typeof HostRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
@@ -181,6 +194,13 @@ declare module '@tanstack/react-router' {
       path: '/feedback'
       fullPath: '/feedback'
       preLoaderRoute: typeof FeedbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot': {
+      id: '/forgot'
+      path: '/forgot'
+      fullPath: '/forgot'
+      preLoaderRoute: typeof ForgotRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/host': {
@@ -239,6 +259,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ArchiveRoute: ArchiveRoute,
   FeedbackRoute: FeedbackRoute,
+  ForgotRoute: ForgotRoute,
   HostRoute: HostRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,

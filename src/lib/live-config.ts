@@ -6,11 +6,11 @@ export const MAX_VIEWERS = 220;
 export const LIVE_PROXY_HEADER = "x-eventview-proxy";
 
 function productionOrigin() {
-  const fromEnv = (
-    (typeof import.meta !== "undefined"
-      ? (import.meta.env as Record<string, string | undefined>).VITE_PRODUCTION_ORIGIN
-      : undefined) ?? ""
-  ).trim();
+  const env =
+    typeof import.meta !== "undefined"
+      ? (import.meta as { env?: Record<string, string | undefined> }).env
+      : undefined;
+  const fromEnv = env?.VITE_PRODUCTION_ORIGIN?.trim() ?? "";
   return fromEnv.replace(/\/$/, "") || "https://yoan-claire-live.vercel.app";
 }
 

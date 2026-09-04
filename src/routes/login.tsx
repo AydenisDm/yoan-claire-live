@@ -2,8 +2,9 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { AccountScreen } from "@/components/account-screen";
 import { AuthSetupPanel } from "@/components/auth-setup-panel";
+import { FormAlert, PasswordField, TextField } from "@/components/field";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { emailFieldError, passwordFieldError } from "@/lib/auth-form";
 import { GROK_PROVIDERS, authClient, authEnabled, signIn } from "@/lib/auth/client";
 import { describeAuthError } from "@/lib/auth/email-errors";
 import { useAuthSetup } from "@/lib/auth/use-auth-setup";
@@ -16,7 +17,8 @@ function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
 
   const setupBlocked = unreachable || (status != null && !status.ok);
   const showSocial = Boolean(status?.ok && status.social);
@@ -27,16 +29,16 @@ function Login() {
     } catch {
       // session store recovers
     }
-    await navigate({ to: "/host" });
+    await navigate({ to: "/host", replace: true });
   };
 
   const onSocial = async (providerId: string) => {
-    setError(null);
+    setFormError(null);
     setBusy(providerId);
     try {
       await signIn(providerId, { callbackURL: "/host", errorCallbackURL: "/login" });
     } catch (err) {
-      setError(describeAuthError(err, "Could not continue with that account."));
+      setFormError(describeAuthError(err, "Could not continue with that account."));
     } finally {
       setBusy(null);
     }
@@ -44,7 +46,13 @@ function Login() {
 
   const onEmail = async (e: FormEvent) => {
     e.preventDefault();
-    setError(null);
+    const next = {
+      email: emailFieldError(email) ?? undefined,
+      password: passwordFieldError(password, { creating: false }) ?? undefined,
+    };
+    setFieldErrors(next);
+    setFormError(null);
+    if (next.email || next.password) return;
     setBusy("email");
     try {
       const { error: fail } = await authClient.signIn.email({
@@ -58,7 +66,7 @@ function Login() {
       }
       await afterAuth();
     } catch (err) {
-      setError(describeAuthError(err, "Could not sign in."));
+      setFormError(describeAuthError(err, "Could not sign in."));
     } finally {
       setBusy(null);
     }
@@ -66,8 +74,9 @@ function Login() {
 
   return (
     <AccountScreen
-      title="Sign in"
+      title="Host sign in"
       subtitle="Use your camera account to go live. Guests never need an account."
+      guestCta
     >
       {!authEnabled ? (
         <p className="mt-8 text-center text-sm text-muted">Sign-in is disabled.</p>
@@ -76,27 +85,46 @@ function Login() {
       ) : setupBlocked ? (
         <AuthSetupPanel status={status} unreachable={unreachable} />
       ) : (
-        <div className="mt-8 space-y-3">
-          <form onSubmit={(e) => void onEmail(e)} className="space-y-3">
-            <Input
+        <div className="mt-8 space-y-4">
+          <div className="flex items-center gap-3">
+            <span className="h-px flex-1 bg-border" />
+            <span className="text-xs tracking-wide text-subtle uppercase">Host</span>
+            <span className="h-px flex-1 bg-border" />
+          </div>
+          <form onSubmit={(e) => void onEmail(e)} noValidate className="space-y-4">
+            <TextField
+              id="login-email"
+              label="Email"
               type="email"
-              autoComplete="email"
+              autoComplete="username"
               inputMode="email"
-              placeholder="Email"
+              name="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (fieldErrors.email) setFieldErrors((prev) => ({ ...prev, email: undefined }));
+              }}
+              error={fieldErrors.email}
             />
-            <Input
-              type="password"
+            <PasswordField
+              id="login-password"
+              label="Password"
+              hint="At least 8 characters."
               autoComplete="current-password"
-              placeholder="Password"
+              name="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              minLength={8}
-              required
+              onChange={(value) => {
+                setPassword(value);
+                if (fieldErrors.password) setFieldErrors((prev) => ({ ...prev, password: undefined }));
+              }}
+              error={fieldErrors.password}
             />
-            {error ? <p className="text-sm text-warn">{error}</p> : null}
+            <p className="text-right text-sm">
+              <Link to="/forgot" className="text-muted underline-offset-4 hover:text-fg hover:underline">
+                Forgot password?
+              </Link>
+            </p>
+            <FormAlert>{formError}</FormAlert>
             <Button type="submit" size="lg" className="w-full" disabled={Boolean(busy)}>
               {busy === "email" ? "Signing in…" : "Sign in"}
             </Button>

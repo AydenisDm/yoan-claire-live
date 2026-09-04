@@ -2,13 +2,16 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { AccountScreen } from "@/components/account-screen";
 import { AuthSetupPanel } from "@/components/auth-setup-panel";
+import { FormAlert, PasswordField, TextField } from "@/components/field";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { confirmFieldError, emailFieldError, passwordFieldError } from "@/lib/auth-form";
 import { authClient, authEnabled } from "@/lib/auth/client";
 import { describeAuthError } from "@/lib/auth/email-errors";
 import { useAuthSetup } from "@/lib/auth/use-auth-setup";
 
 export const Route = createFileRoute("/register")({ component: Register });
+
+type FieldKey = "name" | "email" | "password" | "confirm";
 
 function Register() {
   const navigate = useNavigate();
@@ -18,21 +21,25 @@ function Register() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<FieldKey, string>>>({});
 
   const setupBlocked = unreachable || (status != null && !status.ok);
 
+  const clearField = (key: FieldKey) => {
+    if (fieldErrors[key]) setFieldErrors((prev) => ({ ...prev, [key]: undefined }));
+  };
+
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setError(null);
-    if (password !== confirm) {
-      setError("Those passwords do not match.");
-      return;
-    }
-    if (password.length < 8) {
-      setError("Use at least 8 characters for the password.");
-      return;
-    }
+    const next: Partial<Record<FieldKey, string>> = {
+      email: emailFieldError(email) ?? undefined,
+      password: passwordFieldError(password, { creating: true }) ?? undefined,
+      confirm: confirmFieldError(password, confirm) ?? undefined,
+    };
+    setFieldErrors(next);
+    setFormError(null);
+    if (next.email || next.password || next.confirm) return;
     setBusy(true);
     try {
       const trimmedEmail = email.trim();
@@ -52,9 +59,9 @@ function Register() {
       } catch {
         // session store recovers
       }
-      await navigate({ to: "/host" });
+      await navigate({ to: "/host", replace: true });
     } catch (err) {
-      setError(describeAuthError(err, "Could not create the account."));
+      setFormError(describeAuthError(err, "Could not create the account."));
     } finally {
       setBusy(false);
     }
@@ -62,8 +69,8 @@ function Register() {
 
   return (
     <AccountScreen
-      title="Create account"
-      subtitle="Register a camera account to go live. Guests watch without signing in."
+      title="Create camera account"
+      subtitle="Register to go live. Guests watch without signing in."
     >
       {!authEnabled ? (
         <p className="mt-8 text-center text-sm text-muted">Registration is disabled.</p>
@@ -72,43 +79,63 @@ function Register() {
       ) : setupBlocked ? (
         <AuthSetupPanel status={status} unreachable={unreachable} />
       ) : (
-        <form onSubmit={(e) => void onSubmit(e)} className="mt-8 space-y-3">
-          <Input
+        <form onSubmit={(e) => void onSubmit(e)} noValidate className="mt-8 space-y-4">
+          <TextField
+            id="register-name"
+            label="Your name"
+            hint="Shown on this device. Optional."
             type="text"
             autoComplete="name"
-            placeholder="Your name"
+            name="name"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => {
+              setName(e.target.value);
+              clearField("name");
+            }}
             maxLength={80}
+            error={fieldErrors.name}
           />
-          <Input
+          <TextField
+            id="register-email"
+            label="Email"
             type="email"
             autoComplete="email"
             inputMode="email"
-            placeholder="Email"
+            name="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
+            onChange={(e) => {
+              setEmail(e.target.value);
+              clearField("email");
+            }}
+            error={fieldErrors.email}
           />
-          <Input
-            type="password"
+          <PasswordField
+            id="register-password"
+            label="Password"
+            hint="At least 8 characters."
             autoComplete="new-password"
-            placeholder="Password (8+ characters)"
+            name="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            minLength={8}
-            required
+            onChange={(value) => {
+              setPassword(value);
+              clearField("password");
+              if (confirm) clearField("confirm");
+            }}
+            error={fieldErrors.password}
           />
-          <Input
-            type="password"
+          <PasswordField
+            id="register-confirm"
+            label="Confirm password"
             autoComplete="new-password"
-            placeholder="Confirm password"
+            name="confirm-password"
             value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
-            minLength={8}
-            required
+            onChange={(value) => {
+              setConfirm(value);
+              clearField("confirm");
+            }}
+            error={fieldErrors.confirm}
           />
-          {error ? <p className="text-sm text-warn">{error}</p> : null}
+          <FormAlert>{formError}</FormAlert>
           <Button type="submit" size="lg" className="w-full" disabled={busy}>
             {busy ? "Creating account…" : "Create camera account"}
           </Button>
