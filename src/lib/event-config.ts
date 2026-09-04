@@ -4,8 +4,8 @@ const env = (key: string, fallback: string) => {
 };
 
 export const eventConfig = {
-  productName: env("VITE_PRODUCT_NAME", "Eventstream"),
-  eventName: env("VITE_EVENT_NAME", env("VITE_COUPLE_NAMES", "Eventstream")),
+  productName: env("VITE_PRODUCT_NAME", "EventView"),
+  eventName: env("VITE_EVENT_NAME", env("VITE_COUPLE_NAMES", "EventView")),
   eventDate: env("VITE_EVENT_DATE", ""),
   kicker: env("VITE_KICKER", env("VITE_VENUE_LINE", "Live")),
   playbackUrl: env("VITE_PLAYBACK_URL", ""),

@@ -13,7 +13,7 @@ import { type ChatLine } from "@/lib/crowd";
 import { type Playback } from "@/lib/playback";
 import { cn } from "@/lib/utils";
 
-type Status = "waiting" | "live" | "reconnecting";
+type Status = "waiting" | "live" | "reconnecting" | "full";
 
 type ViewerHandle = {
   start: () => Promise<void>;
@@ -59,7 +59,7 @@ function PlayerShell({
       <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between p-3">
         <Badge
           tone={
-            status === "live" ? "live" : status === "reconnecting" ? "warn" : "muted"
+            status === "live" ? "live" : status === "reconnecting" || status === "full" ? "warn" : "muted"
           }
         >
           {status === "live" ? (
@@ -69,6 +69,8 @@ function PlayerShell({
             </>
           ) : status === "reconnecting" ? (
             "Reconnecting"
+          ) : status === "full" ? (
+            "Full"
           ) : (
             "Waiting"
           )}
@@ -188,7 +190,15 @@ function WebRtcViewer() {
         <div ref={wrapRef} className="relative aspect-video w-full bg-raised">
           {status !== "live" ? (
             <div className="absolute inset-0 z-10">
-              <WaitingRoom status={status === "reconnecting" ? "reconnecting" : "waiting"} />
+              <WaitingRoom
+                status={
+                  status === "reconnecting"
+                    ? "reconnecting"
+                    : status === "full"
+                      ? "full"
+                      : "waiting"
+                }
+              />
             </div>
           ) : null}
           <video

@@ -126,10 +126,10 @@ async function handlePost(request: Request) {
         : `g-${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`;
 
   const { AccessToken, RoomServiceClient } = await import("livekit-server-sdk");
+  const rooms = new RoomServiceClient(httpUrl(env.url), env.apiKey, env.apiSecret);
 
   if (role === "host") {
     try {
-      const rooms = new RoomServiceClient(httpUrl(env.url), env.apiKey, env.apiSecret);
       await rooms.createRoom({
         name: room,
         maxParticipants: MAX_VIEWERS + 4,
@@ -138,6 +138,15 @@ async function handlePost(request: Request) {
       });
     } catch {
       // Room already exists.
+    }
+  } else {
+    try {
+      const people = await rooms.listParticipants(room);
+      if (people.length >= MAX_VIEWERS) {
+        return json({ error: "room_full", configured: true }, 429);
+      }
+    } catch {
+      // Room is not up yet — guests wait in the client.
     }
   }
 
