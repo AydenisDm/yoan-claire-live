@@ -42,6 +42,7 @@ describe("collectTrustedOrigins", () => {
     assert.ok(origins.includes("https://*.vercel.app"));
     assert.ok(origins.includes("*.vercel.app"));
     assert.ok(origins.includes("http://localhost:8080"));
+    assert.ok(origins.includes("http://127.0.0.1:8081"));
   });
 
   it("accepts extra AUTH_TRUSTED_ORIGINS", () => {
