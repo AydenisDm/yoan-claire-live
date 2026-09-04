@@ -13,7 +13,7 @@ import { type ChatLine } from "@/lib/crowd";
 import { type Playback } from "@/lib/playback";
 import { cn } from "@/lib/utils";
 
-type Status = "waiting" | "live" | "reconnecting" | "full";
+type Status = "waiting" | "live" | "reconnecting" | "full" | "offline";
 
 type ViewerHandle = {
   start: () => Promise<void>;
@@ -59,7 +59,11 @@ function PlayerShell({
       <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between p-3">
         <Badge
           tone={
-            status === "live" ? "live" : status === "reconnecting" || status === "full" ? "warn" : "muted"
+            status === "live"
+              ? "live"
+              : status === "reconnecting" || status === "full" || status === "offline"
+                ? "warn"
+                : "muted"
           }
         >
           {status === "live" ? (
@@ -71,6 +75,8 @@ function PlayerShell({
             "Reconnecting"
           ) : status === "full" ? (
             "Full"
+          ) : status === "offline" ? (
+            "Offline"
           ) : (
             "Waiting"
           )}
@@ -196,7 +202,9 @@ function WebRtcViewer() {
                     ? "reconnecting"
                     : status === "full"
                       ? "full"
-                      : "waiting"
+                      : status === "offline"
+                        ? "offline"
+                        : "waiting"
                 }
               />
             </div>
@@ -211,10 +219,11 @@ function WebRtcViewer() {
           />
         </div>
       </PlayerShell>
-      {status === "live" ? (
+      {status !== "full" ? (
         <div className="mt-4">
           <GuestChat
             lines={chats}
+            disabled={status !== "live"}
             onSend={(id) => sessionRef.current?.sendChat(id) ?? false}
           />
         </div>

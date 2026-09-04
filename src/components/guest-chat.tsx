@@ -32,7 +32,11 @@ export function GuestChat({
   return (
     <section className="rounded-xl border border-border bg-surface p-4 sm:p-5">
       <h2 className="font-serif text-xl text-fg">Send a note</h2>
-      <p className="mt-1 text-sm text-muted">Tap one. Guests and the streamer can see it. No typing.</p>
+      <p className="mt-1 text-sm text-muted">
+        {disabled
+          ? "Notes unlock when the picture is live. Tap one then — guests and the streamer can see it."
+          : "Tap one. Guests and the streamer can see it. No typing."}
+      </p>
       <div className="mt-4 flex flex-wrap gap-2">
         {CHAT_OPTIONS.map((opt) => (
           <button
@@ -41,7 +45,7 @@ export function GuestChat({
             disabled={disabled || cool}
             onClick={() => send(opt.id)}
             className={cn(
-              "min-h-11 rounded-full border px-4 text-sm",
+              "min-h-11 rounded-full border px-4 text-sm disabled:cursor-not-allowed disabled:opacity-50",
               mine === opt.id
                 ? "border-accent bg-accent text-accent-fg"
                 : "border-border bg-raised text-fg",

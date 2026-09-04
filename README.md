@@ -18,7 +18,7 @@ Hosts use **email and password** on this app's own Better Auth (not a third-part
 1. Open **Live** (or `/register`).
 2. Create a camera account: name, email, password (8+ characters). You are signed in immediately and land on Live.
 3. Next time, sign in at `/login` with the same email and password.
-4. Tap **Go live**.
+4. Tap **Go live**. Signed in is enough — you do not need a separate host password.
 
 Google / X only show on Grok sandbox hosts, or when this project has its own `GROK_AUTH_CLIENT_ID`. They are not the path to test on Vercel.
 
@@ -77,7 +77,7 @@ Password Protection / Trusted IPs, if enabled, will also block testers.
 
 **Architecture: LiveKit Cloud SFU**, not a WebRTC mesh.
 
-- The host publishes one camera/mic track into a LiveKit room (`maxParticipants` ≈ 224).
+- The host publishes one camera/mic track into LiveKit room `eventview-live` (`maxParticipants` ≈ 224). Do not rename this room unless guests and the host are all on the new name.
 - Each guest subscribes through LiveKit's SFU. Host uplink does not grow with viewer count.
 - Guests use adaptive stream + dynacast; the host publishes simulcast (1080 / 720 / 360).
 - New guests are refused with a clear “room is full” state at ~200, then retry as people leave.

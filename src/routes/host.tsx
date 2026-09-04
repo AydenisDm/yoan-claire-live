@@ -9,6 +9,7 @@ import { RedirectToSignIn, UserButton } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { eventConfig } from "@/lib/event-config";
 import { copyWatchLink } from "@/lib/live-broadcast";
+import { useLiveSetup } from "@/lib/live-setup";
 
 export const Route = createFileRoute("/host")({ ssr: false, component: HostPage });
 
@@ -28,6 +29,7 @@ function HostPage() {
 function HostConsole() {
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState(false);
+  const { status: liveSetup, loading: liveLoading } = useLiveSetup();
   const watchUrl = typeof window === "undefined" ? "/" : `${window.location.origin}/`;
 
   const copyWatch = async () => {
@@ -84,6 +86,19 @@ function HostConsole() {
           One tap fills the screen. Keep the phone plugged in. The room holds about 200
           guests. A hotspot beats packed venue Wi-Fi.
         </p>
+        {!liveLoading && liveSetup && !liveSetup.configured ? (
+          <p className="rounded-xl border border-border bg-raised px-4 py-3 text-sm text-warn">
+            The live room is not connected on this deployment yet. Add LIVEKIT_URL,
+            LIVEKIT_API_KEY, and LIVEKIT_API_SECRET on Vercel for Production and Preview,
+            then redeploy. Guests can still open the watch page and wait.
+          </p>
+        ) : null}
+        {!liveLoading && liveSetup?.configured ? (
+          <p className="text-xs text-subtle">
+            Live room ready{liveSetup.room ? ` · ${liveSetup.room}` : ""}. Signed in is
+            enough — tap Go live.
+          </p>
+        ) : null}
         <GoLive />
       </section>
       <TabBar active="live" />

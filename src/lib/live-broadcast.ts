@@ -1,6 +1,12 @@
 import { AudioPresets, ConnectionState, Room, RoomEvent, Track, VideoPresets, VideoQuality, type LocalTrackPublication, type RemoteParticipant, type RemoteTrack, type RemoteTrackPublication } from "livekit-client";
 import { chatLabel, isChatId, type ChatLine } from "@/lib/crowd";
-import { HOST_IDENTITY, HOST_PW_KEY, PRODUCTION_LIVE_API, guestIdentity } from "@/lib/live-config";
+import {
+  HOST_IDENTITY,
+  HOST_PW_KEY,
+  PRODUCTION_LIVE_API,
+  PRODUCTION_ORIGIN,
+  guestIdentity,
+} from "@/lib/live-config";
 
 export type LiveStats = {
   watching: number;
@@ -44,7 +50,7 @@ async function fetchLiveToken(role: "host" | "guest", password?: string): Promis
   const payload =
     role === "guest" ? { role, identity: guestIdentity() } : { role, password };
   const endpoints = ["/api/live"];
-  if (typeof window !== "undefined" && window.location.origin !== "https://yoan-claire-live.vercel.app") {
+  if (typeof window !== "undefined" && window.location.origin !== PRODUCTION_ORIGIN) {
     endpoints.push(PRODUCTION_LIVE_API);
   }
 
@@ -85,10 +91,16 @@ async function mintToken(endpoint: string, payload: object): Promise<TokenRespon
     body = {};
   }
   if (body.error === "not_configured" || res.status === 503) {
-    throw new LiveConfigError("not_configured", "Live room is not configured yet.");
+    throw new LiveConfigError(
+      "not_configured",
+      "The live room is not connected on this site yet. Add LiveKit keys on Vercel, then try Go live again.",
+    );
   }
   if (res.status === 401 || body.error === "unauthorized") {
-    throw new LiveConfigError("unauthorized", "Host password did not match.");
+    throw new LiveConfigError(
+      "unauthorized",
+      "Could not start as host. Sign in again, then tap Go live.",
+    );
   }
   if (res.status === 429 || body.error === "room_full") {
     throw new LiveConfigError("room_full", "The live room is full. Try again in a moment.");
@@ -376,12 +388,12 @@ export class ViewerSession {
   private backoffMs = 1500;
   private lastChatAt = 0;
   private readonly onStream: (stream: MediaStream | null) => void;
-  private readonly onStatus: (status: "waiting" | "live" | "reconnecting" | "full") => void;
+  private readonly onStatus: (status: "waiting" | "live" | "reconnecting" | "full" | "offline") => void;
   private onChat: (line: ChatLine) => void;
 
   constructor(
     onStream: (stream: MediaStream | null) => void,
-    onStatus: (status: "waiting" | "live" | "reconnecting" | "full") => void,
+    onStatus: (status: "waiting" | "live" | "reconnecting" | "full" | "offline") => void,
     onChat: (line: ChatLine) => void = () => undefined,
   ) {
     this.onStream = onStream;
@@ -510,7 +522,7 @@ export class ViewerSession {
     } catch (err) {
       if (this.closed) return;
       if (err instanceof LiveConfigError && err.code === "not_configured") {
-        this.onStatus("waiting");
+        this.onStatus("offline");
         return;
       }
       if (err instanceof LiveConfigError && err.code === "room_full") {

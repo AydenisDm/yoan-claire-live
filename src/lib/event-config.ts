@@ -11,5 +11,5 @@ export const eventConfig = {
   playbackUrl: env("VITE_PLAYBACK_URL", ""),
   hostPassword: env("VITE_HOST_PASSWORD", "vow"),
   chatEnabled: env("VITE_CHAT_ENABLED", "true") === "true",
-  roomId: env("VITE_ROOM_ID", "ceremony"),
+  roomId: env("VITE_ROOM_ID", "live"),
 } as const;
