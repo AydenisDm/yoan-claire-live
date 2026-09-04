@@ -1,6 +1,13 @@
 import { AudioPresets, ConnectionState, Room, RoomEvent, Track, VideoPresets, VideoQuality, type LocalTrackPublication, type RemoteParticipant, type RemoteTrack, type RemoteTrackPublication } from "livekit-client";
 import { chatLabel, isChatId, type ChatLine } from "@/lib/crowd";
-import { HOST_IDENTITY, HOST_PW_KEY, PRODUCTION_LIVE_API, guestIdentity } from "@/lib/live-config";
+import { eventConfig } from "@/lib/event-config";
+import {
+  HOST_IDENTITY,
+  HOST_PW_KEY,
+  PRODUCTION_LIVE_API,
+  PRODUCTION_ORIGIN,
+  guestIdentity,
+} from "@/lib/live-config";
 
 export type LiveStats = {
   watching: number;
@@ -44,7 +51,7 @@ async function fetchLiveToken(role: "host" | "guest", password?: string): Promis
   const payload =
     role === "guest" ? { role, identity: guestIdentity() } : { role, password };
   const endpoints = ["/api/live"];
-  if (typeof window !== "undefined" && window.location.origin !== "https://yoan-claire-live.vercel.app") {
+  if (typeof window !== "undefined" && window.location.origin !== PRODUCTION_ORIGIN) {
     endpoints.push(PRODUCTION_LIVE_API);
   }
 
@@ -165,7 +172,7 @@ export async function copyWatchLink() {
   } catch {
     if (typeof navigator.share !== "function") return "failed" as const;
     try {
-      await navigator.share({ title: "Watch live", url });
+      await navigator.share({ title: `Watch on ${eventConfig.productName}`, url });
       return "shared" as const;
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") return "cancelled" as const;

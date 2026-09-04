@@ -1,6 +1,6 @@
-# Eventstream
+# EventView
 
-Private live event watch page. The streamer taps **Go live** on `/host`. Guests open the homepage and only watch. The picture stays on this site.
+Event livestream and watch experience. The streamer taps **Go live** on `/host`. Guests open the homepage and only watch. The picture stays on this site.
 
 The filming phone publishes **once** into LiveKit Cloud. Guests subscribe from the SFU. This website stays on Vercel.
 
@@ -28,7 +28,7 @@ Add these on the Vercel project (server only — not `VITE_`):
 - `LIVEKIT_API_SECRET`
 - Optional: `HOST_PASSWORD` — overrides the client host gate if you want a secret that is not in the page
 
-Optional labels: `VITE_EVENT_NAME`, `VITE_EVENT_DATE`, `VITE_KICKER`.
+Optional labels: `VITE_EVENT_NAME`, `VITE_EVENT_DATE`, `VITE_KICKER`. Override the product name with `VITE_PRODUCT_NAME` if needed. Preview environments can point at the production token API with `VITE_PRODUCTION_ORIGIN`.
 
 ## Optional backup
 
