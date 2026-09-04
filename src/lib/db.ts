@@ -48,7 +48,19 @@ const globalRef = globalThis as typeof globalThis & {
   __pgSqlPromise__?: Promise<Sql>;
   __pgliteInstance__?: Promise<import("@electric-sql/pglite").PGlite>;
   __pgliteMigrateChain__?: Promise<void>;
+  __neonMigrateChain__?: Promise<void>;
 };
+
+/**
+ * SQL files inlined by Vite so serverless (Vercel) can apply schema at runtime.
+ * Build-time `npm run db:migrate` is skipped when DATABASE_URL is missing during
+ * the build — Preview deploys often have the URL only at runtime.
+ */
+const bundledMigrations = import.meta.glob("/migrations/*.sql", {
+  query: "?raw",
+  import: "default",
+  eager: true,
+}) as Record<string, string>;
 
 /**
  * Result-type parity: Postgres sends every value as text plus a type OID — the
@@ -93,7 +105,12 @@ function createNeonSql(): Promise<Sql> {
     types.setTypeParser(OID_INT8, Number);
     types.setTypeParser(OID_DATE, identity);
     types.setTypeParser(OID_INTERVAL, identity);
-    const pool = new Pool({ connectionString: databaseUrl });
+    const pool = new Pool({
+      connectionString: databaseUrl,
+      max: 3,
+      connectionTimeoutMillis: 8_000,
+    });
+    await applyNeonMigrations(pool);
     return toSql(async <T>(text: string, params: unknown[]) => {
       const res = await pool.query(text, params);
       return res.rows as T[];
@@ -137,20 +154,15 @@ async function createPgliteSql(): Promise<Sql> {
   // passes serialized on a global chain so concurrent callers never
   // double-apply.
   const migrate = async (): Promise<void> => {
-    const migrations = import.meta.glob("/migrations/*.sql", {
-      query: "?raw",
-      import: "default",
-      eager: true,
-    }) as Record<string, string>;
     const doneRows = await pg.query<{ name: string }>(
       "select name from _migrations",
     );
     const done = doneRows.rows.map((r) => r.name);
-    for (const { name, path } of pendingMigrations(Object.keys(migrations), done)) {
+    for (const { name, path } of pendingMigrations(Object.keys(bundledMigrations), done)) {
       // Apply + record atomically (parity with scripts/migrate.mjs) so a failed
       // statement can't leave a file half-applied but untracked.
       await pg.transaction(async (tx) => {
-        await tx.exec(migrations[path]);
+        await tx.exec(bundledMigrations[path]);
         await tx.query("insert into _migrations (name) values ($1)", [name]);
       });
     }
@@ -178,7 +190,9 @@ async function createSql(): Promise<Sql> {
   }
   if (dbSource === "neon") return createNeonSql();
   if (process.env.VERCEL) {
-    throw new Error("DATABASE_URL is required on Vercel for the live room.");
+    throw new Error(
+      "DATABASE_URL is required on Vercel for accounts. Add a Postgres DATABASE_URL in the Vercel project (Production and Preview), then redeploy.",
+    );
   }
   return createPgliteSql();
 }
@@ -214,17 +228,60 @@ export async function getPglite(): Promise<import("@electric-sql/pglite").PGlite
 }
 
 /**
+ * Apply bundled `migrations/*.sql` on Neon at runtime. Preview env vars are
+ * often runtime-only, so the build-time migrator never saw DATABASE_URL.
+ */
+async function applyNeonMigrations(pool: import("pg").Pool): Promise<void> {
+  const run = async (): Promise<void> => {
+    const client = await pool.connect();
+    try {
+      await client.query(
+        "CREATE TABLE IF NOT EXISTS _migrations (name TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now())",
+      );
+      const applied = (await client.query("SELECT name FROM _migrations")).rows.map(
+        (row: { name: string }) => row.name,
+      );
+      for (const { name, path } of pendingMigrations(Object.keys(bundledMigrations), applied)) {
+        try {
+          await client.query("BEGIN");
+          await client.query(bundledMigrations[path]);
+          await client.query("INSERT INTO _migrations (name) VALUES ($1)", [name]);
+          await client.query("COMMIT");
+        } catch (err) {
+          try {
+            await client.query("ROLLBACK");
+          } catch {
+            // keep original error
+          }
+          const code = (err as { code?: string } | undefined)?.code;
+          // Concurrent first-request migrate: the other instance won.
+          if (code === "23505") continue;
+          throw err;
+        }
+      }
+    } finally {
+      client.release();
+    }
+  };
+  const pass = (globalRef.__neonMigrateChain__ ?? Promise.resolve())
+    .catch(() => undefined)
+    .then(run);
+  globalRef.__neonMigrateChain__ = pass;
+  await pass;
+}
+
+/**
  * Finish DB bootstrap before the server handles traffic.
  *
- * - **PGLite** (preview / no `DATABASE_URL`): open the in-memory DB and apply
+ * - **PGLite** (local / no `DATABASE_URL`): open the in-memory DB and apply
  *   `migrations/*.sql`. Idempotent — concurrent callers share one promise.
- * - **Neon**: no-op (pool is created lazily on first query).
+ * - **Neon / Postgres**: open the pool and apply pending migrations (so Vercel
+ *   Preview still gets the auth tables when migrate was skipped at build).
  *
  * Vite `configureServer` awaits this at dev startup; production imports of this
  * module kick it off immediately (see bottom of file).
  */
 export function ensureDbReady(): Promise<void> {
-  if (dbSource !== "pglite") return Promise.resolve();
   return getSql().then(() => undefined);
 }
 

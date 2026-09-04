@@ -21,6 +21,42 @@ export const LOCAL_DEV_ORIGINS: string[] = [
   "http://[::1]:8081",
 ];
 
+const APP_HOST_SUFFIXES = [".vercel.app", ".grok.me", ".grok-sandbox.com"] as const;
+
+function hostnameOf(value: string): string | undefined {
+  try {
+    return new URL(value).hostname.toLowerCase();
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * True when this Origin is one of ours (Vercel preview/prod, Grok, or loopback).
+ * Used to trust the request Origin even if a wildcard pattern in Better Auth
+ * fails to match a nested `*.*.vercel.app` host.
+ */
+export function originLooksLikeThisApp(origin: string): boolean {
+  const host = hostnameOf(origin.trim());
+  if (!host) return false;
+  if (host === "localhost" || host === "127.0.0.1" || host === "[::1]") return true;
+  return APP_HOST_SUFFIXES.some((suffix) => host.endsWith(suffix));
+}
+
+/** Extra origins derived from the incoming request (Host / Origin). */
+export function requestTrustedOrigins(request: Request | undefined): string[] {
+  if (!request) return [];
+  const extra = new Set<string>();
+  const origin = request.headers.get("origin")?.trim();
+  if (origin && originLooksLikeThisApp(origin)) extra.add(origin.replace(/\/+$/, ""));
+
+  const forwarded = request.headers.get("x-forwarded-host");
+  const hostHeader = (forwarded || request.headers.get("host") || "").split(",")[0]?.trim();
+  const host = hostHeader?.split(":")[0]?.toLowerCase();
+  if (host && originLooksLikeThisApp(`https://${host}`)) extra.add(`https://${host}`);
+  return [...extra];
+}
+
 const DEFAULT_HOSTS = [
   "*.grok-sandbox.com",
   "*.vercel.app",

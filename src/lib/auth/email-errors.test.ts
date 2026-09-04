@@ -12,4 +12,15 @@ describe("describeAuthError", () => {
   it("keeps a useful fallback", () => {
     assert.equal(describeAuthError(new Error(""), "Could not sign in."), "Could not sign in.");
   });
+
+  it("maps a missing Vercel database to a setup sentence", () => {
+    assert.match(
+      describeAuthError({ message: "x", code: "missing_database" }, "x"),
+      /cannot save accounts/i,
+    );
+    assert.match(
+      describeAuthError(new Error("DATABASE_URL is required on Vercel"), "x"),
+      /DATABASE_URL/,
+    );
+  });
 });

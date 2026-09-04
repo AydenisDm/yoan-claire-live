@@ -1,21 +1,26 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { AccountScreen } from "@/components/account-screen";
+import { AuthSetupPanel } from "@/components/auth-setup-panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { authClient, authEnabled } from "@/lib/auth/client";
 import { describeAuthError } from "@/lib/auth/email-errors";
+import { useAuthSetup } from "@/lib/auth/use-auth-setup";
 
 export const Route = createFileRoute("/register")({ component: Register });
 
 function Register() {
   const navigate = useNavigate();
+  const { status, loading, unreachable } = useAuthSetup();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const setupBlocked = unreachable || (status != null && !status.ok);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -37,7 +42,11 @@ function Register() {
         password,
         name: display,
       });
-      if (fail) throw new Error(fail.message ?? "Could not create the account.");
+      if (fail) {
+        throw Object.assign(new Error(fail.message ?? "Could not create the account."), {
+          code: fail.code,
+        });
+      }
       try {
         await authClient.getSession();
       } catch {
@@ -56,7 +65,13 @@ function Register() {
       title="Create account"
       subtitle="Register a camera account to go live. Guests watch without signing in."
     >
-      {authEnabled ? (
+      {!authEnabled ? (
+        <p className="mt-8 text-center text-sm text-muted">Registration is disabled.</p>
+      ) : loading ? (
+        <p className="mt-8 text-center text-sm text-muted">Checking account service…</p>
+      ) : setupBlocked ? (
+        <AuthSetupPanel status={status} unreachable={unreachable} />
+      ) : (
         <form onSubmit={(e) => void onSubmit(e)} className="mt-8 space-y-3">
           <Input
             type="text"
@@ -104,8 +119,6 @@ function Register() {
             </Link>
           </p>
         </form>
-      ) : (
-        <p className="mt-8 text-center text-sm text-muted">Registration is disabled.</p>
       )}
     </AccountScreen>
   );

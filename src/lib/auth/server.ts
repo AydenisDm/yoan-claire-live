@@ -40,15 +40,24 @@ import { emailAndPasswordEnabled } from "./email-password";
 import { GATE_PROVIDER_ID, gateIdentitySessions } from "./gate-session.server";
 import { GROK_PROVIDERS } from "./providers";
 import { pgliteDialect } from "./pglite-dialect";
-import { collectAllowedHosts, collectTrustedOrigins } from "./deploy-origins";
+import {
+  collectAllowedHosts,
+  collectTrustedOrigins,
+  requestTrustedOrigins,
+} from "./deploy-origins";
+import { resolveAuthSecret } from "./secret";
 import {
   GROK_ISSUER_DEFAULT,
   PREVIEW_CLIENT_ID,
   PREVIEW_CLIENT_SECRET,
 } from "./preview";
 
-// Kick (and share) PGLite bootstrap as soon as the auth server module loads.
-void ensureDbReady();
+// Kick (and share) DB bootstrap as soon as the auth server module loads.
+// Must catch: on Vercel without DATABASE_URL this rejects, and an unhandled
+// rejection used to crash sign-up with an empty HTTP 500.
+void ensureDbReady().catch((err) => {
+  console.error("[auth] database bootstrap failed:", err);
+});
 
 /**
  * Preview secret must outlive module reloads: PGLite (and its session rows) is
@@ -103,10 +112,15 @@ const baseURL = {
 };
 
 // Origins Better Auth accepts on credentialed POSTs (sign-up/sign-in, etc.).
-// Missing entries here surface as FORBIDDEN "Invalid origin".
-const trustedOrigins: string[] = collectTrustedOrigins();
+// Missing entries here surface as FORBIDDEN "Invalid origin". Always include
+// the request Origin when it is this app (nested Vercel preview hosts).
+const trustedOrigins = async (request?: Request) => [
+  ...collectTrustedOrigins(),
+  ...requestTrustedOrigins(request),
+];
 
 const databaseUrl = env("DATABASE_URL");
+const authSecret = resolveAuthSecret(process.env, previewAuthSecret);
 
 // Static broker OAuth endpoints (skip OIDC discovery on every sign-in / callback).
 // Discovery would cost an extra network hop to the broker before the popup can
@@ -123,7 +137,11 @@ const grokUserInfoUrl = `${issuerBase}/api/auth/oauth2/userinfo`;
 // schema from `migrations/auth/0001_auth.sql`, copied into `migrations/` when
 // the app turns sign-in on.
 const database = databaseUrl
-  ? new Pool({ connectionString: databaseUrl })
+  ? new Pool({
+      connectionString: databaseUrl,
+      max: 3,
+      connectionTimeoutMillis: 8_000,
+    })
   : { dialect: pgliteDialect(() => getPglite()), type: "postgres" as const };
 
 /** Session token cookie name — also read by the live-preview popup completion page. */
@@ -157,7 +175,7 @@ export const auth = betterAuth({
   baseURL,
   // Deployed apps inject BETTER_AUTH_SECRET. Preview: process-stable secret on
   // globalThis so HMR doesn't invalidate PGLite-backed sessions (see above).
-  secret: env("BETTER_AUTH_SECRET") ?? previewAuthSecret(),
+  secret: authSecret.secret,
   database,
 
   // CSRF / origin check for credentialed auth POSTs (email sign-up/sign-in, …).
@@ -210,6 +228,10 @@ export const auth = betterAuth({
   // Secure + the names ourselves. (Browsers allow Secure cookies on
   // `http://localhost`, so local dev still works.)
   advanced: {
+    // Vercel terminates TLS and forwards the public host. Without this, Better
+    // Auth can resolve baseURL from an internal Host and then fail cookie/CSRF
+    // checks on the public preview URL.
+    trustedProxyHeaders: true,
     useSecureCookies: false,
     defaultCookieAttributes: { secure: true, sameSite: "lax", path: "/" },
     cookies: {

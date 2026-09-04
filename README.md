@@ -16,26 +16,54 @@ The filming phone publishes **once** into LiveKit Cloud (an SFU). Guests subscri
 Hosts use **email and password** on this app's own Better Auth (not a third-party IdP).
 
 1. Open **Live** (or `/register`).
-2. Create a camera account: name, email, password (8+ characters). You are signed in immediately.
-3. Next time, sign in at `/login`.
-4. Google / X remain available when the Grok auth broker is configured for this deployment. They are optional. Email is the path that must work on production.
+2. Create a camera account: name, email, password (8+ characters). You are signed in immediately and land on Live.
+3. Next time, sign in at `/login` with the same email and password.
+4. Tap **Go live**.
+
+Google / X only show on Grok sandbox hosts, or when this project has its own `GROK_AUTH_CLIENT_ID`. They are not the path to test on Vercel.
 
 ### What was broken
 
-Production at `https://yoan-claire-live.vercel.app` rejected email sign-in and sign-up with `403 Invalid origin`. Better Auth only trusted `BETTER_AUTH_URL` (often a `*.grok.me` URL) or `*.grok-sandbox.com`, so the Vercel origin was not on the allowlist. OAuth init could 500 for the same host mismatch. Trusted origins now include `*.vercel.app`, `*.grok.me`, preview hosts, and `VERCEL_URL`.
+1. **Production origin (old deploys):** `https://yoan-claire-live.vercel.app` rejected email sign-in/sign-up with `403 Invalid origin` because Better Auth only trusted `BETTER_AUTH_URL` / `*.grok-sandbox.com`. Trusted origins now include Vercel, Grok, and the request Origin when it is this app.
+2. **Preview empty HTTP 500 (the remaining blocker):** `POST /api/auth/sign-up/email` on the Vercel preview returned **500 with an empty body**. That is not an origin error. On Vercel, Better Auth was still falling through to embedded **PGLite** when `DATABASE_URL` was missing (or the auth tables were never applied because `db:migrate` skipped at build). PGLite cannot run on Vercel serverless, so sign-up crashed. Sessions signed with a **per-lambda random secret** would also look like “login does not work” on the next request.
+3. Google / X buttons on `*.vercel.app` cannot complete OAuth (the baked preview client only allows `*.grok-sandbox.com` callbacks). They are hidden on Vercel unless a real broker client is configured.
 
-### Env (server only — never `VITE_` for secrets)
+Fixes: apply auth migrations at **runtime** when Postgres is configured; never use PGLite on Vercel; return a setup screen + JSON error when `DATABASE_URL` is missing; keep a stable session secret across lambdas.
 
-| Var | Purpose |
-|---|---|
-| `DATABASE_URL` | Postgres for accounts and sessions |
-| `BETTER_AUTH_SECRET` | Signs local sessions |
-| `BETTER_AUTH_URL` | Optional public origin fallback |
-| `AUTH_ALLOWED_HOSTS` | Optional extra hosts (`example.com,www.example.com`) |
-| `AUTH_TRUSTED_ORIGINS` | Optional extra full origins |
-| `GROK_AUTH_*` | Optional Google/X via the Grok broker |
+This preview was **not** behind a Vercel Authentication SSO wall (the login HTML loaded). If a later deploy shows a Vercel login gate instead of EventView, turn that off — see below.
 
-Never commit secrets. Set them on the Vercel project.
+### Env vars required on Vercel (Project → Settings → Environment Variables)
+
+Set these for **Production and Preview**, then **redeploy**. Never put them in the repo.
+
+| Var | Required | Purpose |
+|---|---|---|
+| `DATABASE_URL` | **Yes** | Postgres (Neon) for users and sessions. Without it, Create account cannot work on Vercel. |
+| `BETTER_AUTH_SECRET` | **Yes** (strongly) | Signs session cookies. Use a long random string. If omitted, the app derives a stable key from `DATABASE_URL` so lambdas still agree. |
+| `BETTER_AUTH_URL` | Optional | Public origin fallback (e.g. `https://yoan-claire-live.vercel.app`) |
+| `AUTH_ALLOWED_HOSTS` | Optional | Extra hosts |
+| `AUTH_TRUSTED_ORIGINS` | Optional | Extra full origins |
+| `GROK_AUTH_*` | Optional | Google/X via the Grok broker — not required for email accounts |
+| `LIVEKIT_URL` / `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` | For Go live | LiveKit Cloud |
+
+`VITE_AUTH_ENABLED` must **not** be `"false"` (this app already leaves it unset so email auth is on).
+
+### Vercel Deployment Protection
+
+If guests or testers see a **Vercel** username/password or SSO page instead of EventView:
+
+1. Vercel project → **Settings** → **Deployment Protection**.
+2. For **Production**, set Vercel Authentication to **Disabled** (or Standard Protection off) so anyone with the link can open the site. The app has its own camera-account sign-in for hosts; guests should not need a Vercel login.
+3. Preview protection can stay on if you only want GitHub collaborators opening draft URLs — but then the person testing login must be logged into Vercel, which is easy to confuse with app login.
+
+Password Protection / Trusted IPs, if enabled, will also block testers.
+
+### How to confirm accounts work after a deploy
+
+1. Open `/register` on the preview. You should see the form (not a “accounts are not ready” setup card).
+2. Create an account → you land on **Live**, signed in.
+3. Sign out, open `/login`, sign in with the same email → Live again.
+4. If you see the setup card, `DATABASE_URL` is missing on that Vercel environment.
 
 ## Streamer, on the day
 

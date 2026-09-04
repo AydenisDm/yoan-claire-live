@@ -1,19 +1,25 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { AccountScreen } from "@/components/account-screen";
+import { AuthSetupPanel } from "@/components/auth-setup-panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { GROK_PROVIDERS, authClient, authEnabled, signIn } from "@/lib/auth/client";
 import { describeAuthError } from "@/lib/auth/email-errors";
+import { useAuthSetup } from "@/lib/auth/use-auth-setup";
 
 export const Route = createFileRoute("/login")({ component: Login });
 
 function Login() {
   const navigate = useNavigate();
+  const { status, loading, unreachable } = useAuthSetup();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const setupBlocked = unreachable || (status != null && !status.ok);
+  const showSocial = Boolean(status?.ok && status.social);
 
   const afterAuth = async () => {
     try {
@@ -45,7 +51,11 @@ function Login() {
         email: email.trim(),
         password,
       });
-      if (fail) throw new Error(fail.message ?? "Email or password did not match.");
+      if (fail) {
+        throw Object.assign(new Error(fail.message ?? "Email or password did not match."), {
+          code: fail.code,
+        });
+      }
       await afterAuth();
     } catch (err) {
       setError(describeAuthError(err, "Could not sign in."));
@@ -57,9 +67,15 @@ function Login() {
   return (
     <AccountScreen
       title="Sign in"
-      subtitle="Use your camera account to go live and keep an archive on this phone. Guests never need an account."
+      subtitle="Use your camera account to go live. Guests never need an account."
     >
-      {authEnabled ? (
+      {!authEnabled ? (
+        <p className="mt-8 text-center text-sm text-muted">Sign-in is disabled.</p>
+      ) : loading ? (
+        <p className="mt-8 text-center text-sm text-muted">Checking account service…</p>
+      ) : setupBlocked ? (
+        <AuthSetupPanel status={status} unreachable={unreachable} />
+      ) : (
         <div className="mt-8 space-y-3">
           <form onSubmit={(e) => void onEmail(e)} className="space-y-3">
             <Input
@@ -93,28 +109,29 @@ function Login() {
             </Link>
           </p>
 
-          <div className="flex items-center gap-3 py-2">
-            <span className="h-px flex-1 bg-border" />
-            <span className="text-xs tracking-wide text-subtle uppercase">or</span>
-            <span className="h-px flex-1 bg-border" />
-          </div>
-
-          {GROK_PROVIDERS.map((p) => (
-            <Button
-              key={p.providerId}
-              type="button"
-              variant="secondary"
-              size="lg"
-              className="w-full"
-              disabled={Boolean(busy)}
-              onClick={() => void onSocial(p.providerId)}
-            >
-              {busy === p.providerId ? "Opening…" : `Continue with ${p.label}`}
-            </Button>
-          ))}
+          {showSocial ? (
+            <>
+              <div className="flex items-center gap-3 py-2">
+                <span className="h-px flex-1 bg-border" />
+                <span className="text-xs tracking-wide text-subtle uppercase">or</span>
+                <span className="h-px flex-1 bg-border" />
+              </div>
+              {GROK_PROVIDERS.map((p) => (
+                <Button
+                  key={p.providerId}
+                  type="button"
+                  variant="secondary"
+                  size="lg"
+                  className="w-full"
+                  disabled={Boolean(busy)}
+                  onClick={() => void onSocial(p.providerId)}
+                >
+                  {busy === p.providerId ? "Opening…" : `Continue with ${p.label}`}
+                </Button>
+              ))}
+            </>
+          ) : null}
         </div>
-      ) : (
-        <p className="mt-8 text-center text-sm text-muted">Sign-in is disabled.</p>
       )}
     </AccountScreen>
   );

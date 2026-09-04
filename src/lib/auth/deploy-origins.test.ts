@@ -4,6 +4,8 @@ import {
   collectAllowedHosts,
   collectTrustedOrigins,
   hostFromValue,
+  originLooksLikeThisApp,
+  requestTrustedOrigins,
 } from "./deploy-origins.ts";
 
 describe("hostFromValue", () => {
@@ -43,6 +45,32 @@ describe("collectTrustedOrigins", () => {
     assert.ok(origins.includes("*.vercel.app"));
     assert.ok(origins.includes("http://localhost:8080"));
     assert.ok(origins.includes("http://127.0.0.1:8081"));
+  });
+
+  it("recognizes nested Vercel preview hosts as this app", () => {
+    assert.equal(
+      originLooksLikeThisApp(
+        "https://yoan-claire-live-hmilxkdms-aydenisdms-projects.vercel.app",
+      ),
+      true,
+    );
+    assert.equal(originLooksLikeThisApp("https://yoan-claire-live.vercel.app"), true);
+    assert.equal(originLooksLikeThisApp("https://eventview.grok.me"), true);
+    assert.equal(originLooksLikeThisApp("https://evil.com"), false);
+    assert.equal(originLooksLikeThisApp("https://evilvercel.app"), false);
+  });
+
+  it("adds the request Origin when it is a Vercel preview host", () => {
+    const request = new Request("https://example.invalid/api/auth/sign-up/email", {
+      headers: {
+        origin: "https://yoan-claire-live-hmilxkdms-aydenisdms-projects.vercel.app",
+        host: "yoan-claire-live-hmilxkdms-aydenisdms-projects.vercel.app",
+      },
+    });
+    const extra = requestTrustedOrigins(request);
+    assert.ok(
+      extra.includes("https://yoan-claire-live-hmilxkdms-aydenisdms-projects.vercel.app"),
+    );
   });
 
   it("accepts extra AUTH_TRUSTED_ORIGINS", () => {
