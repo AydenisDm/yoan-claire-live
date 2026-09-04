@@ -31,8 +31,8 @@ const hostPublishDefaults = {
 };
 
 export class LiveConfigError extends Error {
-  code: "not_configured" | "unauthorized" | "failed";
-  constructor(code: "not_configured" | "unauthorized" | "failed", message: string) {
+  code: "not_configured" | "unauthorized" | "failed" | "room_full";
+  constructor(code: "not_configured" | "unauthorized" | "failed" | "room_full", message: string) {
     super(message);
     this.code = code;
   }
@@ -92,10 +92,19 @@ async function mintToken(endpoint: string, payload: object): Promise<TokenRespon
     body = {};
   }
   if (body.error === "not_configured" || res.status === 503) {
-    throw new LiveConfigError("not_configured", "Live room is not configured yet.");
+    throw new LiveConfigError(
+      "not_configured",
+      "The live room is not connected on this site yet. Add LiveKit keys on Vercel, then try Go live again.",
+    );
   }
   if (res.status === 401 || body.error === "unauthorized") {
-    throw new LiveConfigError("unauthorized", "Host password did not match.");
+    throw new LiveConfigError(
+      "unauthorized",
+      "Could not start as host. Sign in again, then tap Go live.",
+    );
+  }
+  if (res.status === 429 || body.error === "room_full") {
+    throw new LiveConfigError("room_full", "The live room is full. Try again in a moment.");
   }
   if (!res.ok || !body.token || !body.url) {
     throw new LiveConfigError("failed", "Could not join the live room.");
@@ -380,12 +389,12 @@ export class ViewerSession {
   private backoffMs = 1500;
   private lastChatAt = 0;
   private readonly onStream: (stream: MediaStream | null) => void;
-  private readonly onStatus: (status: "waiting" | "live" | "reconnecting") => void;
+  private readonly onStatus: (status: "waiting" | "live" | "reconnecting" | "full" | "offline") => void;
   private onChat: (line: ChatLine) => void;
 
   constructor(
     onStream: (stream: MediaStream | null) => void,
-    onStatus: (status: "waiting" | "live" | "reconnecting") => void,
+    onStatus: (status: "waiting" | "live" | "reconnecting" | "full" | "offline") => void,
     onChat: (line: ChatLine) => void = () => undefined,
   ) {
     this.onStream = onStream;
@@ -514,7 +523,12 @@ export class ViewerSession {
     } catch (err) {
       if (this.closed) return;
       if (err instanceof LiveConfigError && err.code === "not_configured") {
-        this.onStatus("waiting");
+        this.onStatus("offline");
+        return;
+      }
+      if (err instanceof LiveConfigError && err.code === "room_full") {
+        this.onStatus("full");
+        this.scheduleReconnect(12_000);
         return;
       }
       this.onStatus(this.everLive ? "reconnecting" : "waiting");
@@ -522,10 +536,10 @@ export class ViewerSession {
     }
   }
 
-  private scheduleReconnect() {
+  private scheduleReconnect(overrideMs?: number) {
     if (this.closed) return;
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
-    const wait = this.backoffMs;
+    const wait = overrideMs ?? this.backoffMs;
     this.backoffMs = Math.min(8000, Math.round(this.backoffMs * 1.4));
     this.reconnectTimer = setTimeout(() => {
       void this.start();

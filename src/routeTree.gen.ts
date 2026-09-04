@@ -12,8 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ArchiveRouteImport } from './routes/archive'
 import { Route as FeedbackRouteImport } from './routes/feedback'
+import { Route as ForgotRouteImport } from './routes/forgot'
 import { Route as HostRouteImport } from './routes/host'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as RegisterRouteImport } from './routes/register'
 import { Route as WatchRouteImport } from './routes/watch'
 import { Route as ApiLiveRouteImport } from './routes/api/live'
 import { Route as ApiRtcRouteImport } from './routes/api/rtc'
@@ -34,6 +36,11 @@ const FeedbackRoute = FeedbackRouteImport.update({
   path: '/feedback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ForgotRoute = ForgotRouteImport.update({
+  id: '/forgot',
+  path: '/forgot',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HostRoute = HostRouteImport.update({
   id: '/host',
   path: '/host',
@@ -42,6 +49,11 @@ const HostRoute = HostRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WatchRoute = WatchRouteImport.update({
@@ -69,8 +81,10 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/archive': typeof ArchiveRoute
   '/feedback': typeof FeedbackRoute
+  '/forgot': typeof ForgotRoute
   '/host': typeof HostRoute
   '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
   '/watch': typeof WatchRoute
   '/api/live': typeof ApiLiveRoute
   '/api/rtc': typeof ApiRtcRoute
@@ -80,8 +94,10 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/archive': typeof ArchiveRoute
   '/feedback': typeof FeedbackRoute
+  '/forgot': typeof ForgotRoute
   '/host': typeof HostRoute
   '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
   '/watch': typeof WatchRoute
   '/api/live': typeof ApiLiveRoute
   '/api/rtc': typeof ApiRtcRoute
@@ -92,8 +108,10 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/archive': typeof ArchiveRoute
   '/feedback': typeof FeedbackRoute
+  '/forgot': typeof ForgotRoute
   '/host': typeof HostRoute
   '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
   '/watch': typeof WatchRoute
   '/api/live': typeof ApiLiveRoute
   '/api/rtc': typeof ApiRtcRoute
@@ -105,8 +123,10 @@ export interface FileRouteTypes {
     | '/'
     | '/archive'
     | '/feedback'
+    | '/forgot'
     | '/host'
     | '/login'
+    | '/register'
     | '/watch'
     | '/api/live'
     | '/api/rtc'
@@ -116,8 +136,10 @@ export interface FileRouteTypes {
     | '/'
     | '/archive'
     | '/feedback'
+    | '/forgot'
     | '/host'
     | '/login'
+    | '/register'
     | '/watch'
     | '/api/live'
     | '/api/rtc'
@@ -127,8 +149,10 @@ export interface FileRouteTypes {
     | '/'
     | '/archive'
     | '/feedback'
+    | '/forgot'
     | '/host'
     | '/login'
+    | '/register'
     | '/watch'
     | '/api/live'
     | '/api/rtc'
@@ -139,8 +163,10 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ArchiveRoute: typeof ArchiveRoute
   FeedbackRoute: typeof FeedbackRoute
+  ForgotRoute: typeof ForgotRoute
   HostRoute: typeof HostRoute
   LoginRoute: typeof LoginRoute
+  RegisterRoute: typeof RegisterRoute
   WatchRoute: typeof WatchRoute
   ApiLiveRoute: typeof ApiLiveRoute
   ApiRtcRoute: typeof ApiRtcRoute
@@ -170,6 +196,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FeedbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/forgot': {
+      id: '/forgot'
+      path: '/forgot'
+      fullPath: '/forgot'
+      preLoaderRoute: typeof ForgotRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/host': {
       id: '/host'
       path: '/host'
@@ -182,6 +215,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/watch': {
@@ -219,8 +259,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ArchiveRoute: ArchiveRoute,
   FeedbackRoute: FeedbackRoute,
+  ForgotRoute: ForgotRoute,
   HostRoute: HostRoute,
   LoginRoute: LoginRoute,
+  RegisterRoute: RegisterRoute,
   WatchRoute: WatchRoute,
   ApiLiveRoute: ApiLiveRoute,
   ApiRtcRoute: ApiRtcRoute,

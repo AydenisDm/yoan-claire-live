@@ -13,7 +13,7 @@ import { type ChatLine } from "@/lib/crowd";
 import { type Playback } from "@/lib/playback";
 import { cn } from "@/lib/utils";
 
-type Status = "waiting" | "live" | "reconnecting";
+type Status = "waiting" | "live" | "reconnecting" | "full" | "offline";
 
 type ViewerHandle = {
   start: () => Promise<void>;
@@ -59,7 +59,11 @@ function PlayerShell({
       <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between p-3">
         <Badge
           tone={
-            status === "live" ? "live" : status === "reconnecting" ? "warn" : "muted"
+            status === "live"
+              ? "live"
+              : status === "reconnecting" || status === "full" || status === "offline"
+                ? "warn"
+                : "muted"
           }
         >
           {status === "live" ? (
@@ -69,6 +73,10 @@ function PlayerShell({
             </>
           ) : status === "reconnecting" ? (
             "Reconnecting"
+          ) : status === "full" ? (
+            "Full"
+          ) : status === "offline" ? (
+            "Offline"
           ) : (
             "Waiting"
           )}
@@ -188,7 +196,17 @@ function WebRtcViewer() {
         <div ref={wrapRef} className="relative aspect-video w-full bg-raised">
           {status !== "live" ? (
             <div className="absolute inset-0 z-10">
-              <WaitingRoom status={status === "reconnecting" ? "reconnecting" : "waiting"} />
+              <WaitingRoom
+                status={
+                  status === "reconnecting"
+                    ? "reconnecting"
+                    : status === "full"
+                      ? "full"
+                      : status === "offline"
+                        ? "offline"
+                        : "waiting"
+                }
+              />
             </div>
           ) : null}
           <video
@@ -201,10 +219,11 @@ function WebRtcViewer() {
           />
         </div>
       </PlayerShell>
-      {status === "live" ? (
+      {status !== "full" ? (
         <div className="mt-4">
           <GuestChat
             lines={chats}
+            disabled={status !== "live"}
             onSend={(id) => sessionRef.current?.sendChat(id) ?? false}
           />
         </div>

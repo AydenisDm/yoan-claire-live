@@ -39,8 +39,14 @@ async function keepAwake() {
 function errorCopy(err: unknown) {
   if (err instanceof LiveConfigError) return err.message;
   const name = err && typeof err === "object" && "name" in err ? String(err.name) : "";
-  if (name === "NotAllowedError" || name === "NotFoundError" || name === "NotReadableError") {
-    return "Allow camera and microphone, then try Go live again.";
+  if (name === "NotAllowedError") {
+    return "Allow camera and microphone in the browser, then try Go live again.";
+  }
+  if (name === "NotFoundError") {
+    return "No camera was found on this phone. Plug one in, or try another device.";
+  }
+  if (name === "NotReadableError") {
+    return "The camera is busy in another app. Close it, then try Go live again.";
   }
   return "Could not start the live picture. Try Go live again.";
 }
@@ -195,6 +201,7 @@ export function GoLive() {
       setTorchOn(false);
       setTorch(cameraHasTorch(stream));
       await runtime.broadcast.replaceStream(stream);
+      runtime.recorder.replace(stream);
     } catch {
       try {
         const stream = await openCamera(previous);
@@ -204,6 +211,7 @@ export function GoLive() {
         setFacing(previous);
         setTorch(cameraHasTorch(stream));
         await runtime.broadcast.replaceStream(stream);
+        runtime.recorder.replace(stream);
         setError("Could not switch camera.");
       } catch {
         setError("Could not switch camera. Stop, then Go live again.");
