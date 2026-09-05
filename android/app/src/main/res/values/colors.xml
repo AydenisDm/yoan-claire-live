@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ev_bg">#0E0F12</color>
-    <color name="ev_live">#EF4444</color>
-    <color name="ev_fg">#EEF0F4</color>
-    <color name="ic_launcher_background">#0E0F12</color>
+    <color name="ev_bg">#09090B</color>
+    <color name="ev_live">#F43F5E</color>
+    <color name="ev_fg">#F4F1EA</color>
+    <color name="ic_launcher_background">#09090B</color>
 </resources>

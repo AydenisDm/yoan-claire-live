@@ -33,8 +33,8 @@ import com.eventview.app.ui.components.ErrorBanner
 import com.eventview.app.ui.components.EvCard
 import com.eventview.app.ui.components.EvPrimaryButton
 import com.eventview.app.ui.components.EvSecondaryButton
-import com.eventview.app.ui.components.Kicker
 import com.eventview.app.ui.components.LiveVideo
+import com.eventview.app.ui.components.ScreenHeader
 import com.eventview.app.ui.components.StatusBadge
 import com.eventview.app.ui.theme.EvBg
 import com.eventview.app.ui.theme.EvFg
@@ -73,36 +73,31 @@ fun HostScreen(
         return
     }
 
-    val pad = if (window.isTablet) 28.dp else 16.dp
+    val pad = if (window.isTablet) 28.dp else 20.dp
     Column(
         modifier
             .fillMaxSize()
             .background(EvBg)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = pad)
-            .padding(top = 16.dp, bottom = 28.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
+            .padding(top = 20.dp, bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(22.dp),
     ) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Column {
-                Kicker(BuildConfig.PRODUCT_NAME)
-                Text("Live", style = MaterialTheme.typography.displayMedium, color = EvFg)
-                Text(
-                    "Film from this device. Guests only watch.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = LocalEvColors.current.muted,
-                )
-            }
-            if (session != null) {
-                EvSecondaryButton("Sign out", onClick = onSignOut)
-            }
-        }
+        ScreenHeader(
+            title = "Live",
+            subtitle = "Film from this device. Guests only watch.",
+            trailing = if (session != null) {
+                { EvSecondaryButton("Sign out", onClick = onSignOut) }
+            } else {
+                null
+            },
+        )
 
         EvCard {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("EventView guest link", style = MaterialTheme.typography.titleLarge, color = EvFg)
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Text("Guest invite", style = MaterialTheme.typography.titleLarge, color = EvFg)
                 Text(
-                    "Copy or share this EventView invite. Guests never sign in. Stopping a live saves a session to Archive on this phone.",
+                    "Share this EventView link. Guests never sign in. Stopping a live saves a session to Archive on this phone.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = LocalEvColors.current.muted,
                 )
@@ -124,7 +119,7 @@ fun HostScreen(
             )
         } else if (setup?.configured == true) {
             Text(
-                "Live room ready${setup.room?.let { " · $it" } ?: ""}. Signed in is enough — tap Go live.",
+                "Room ready${setup.room?.let { " · $it" } ?: ""}. Signed in is enough — tap Go live.",
                 style = MaterialTheme.typography.bodySmall,
                 color = LocalEvColors.current.subtle,
             )
@@ -132,7 +127,7 @@ fun HostScreen(
 
         if (session == null) {
             EvCard {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Text("Camera account", style = MaterialTheme.typography.titleLarge, color = EvFg)
                     Text(
                         "Sign in or create an account to go live. Guests never need one.",
@@ -140,11 +135,15 @@ fun HostScreen(
                         color = LocalEvColors.current.muted,
                     )
                     EvPrimaryButton("Sign in", onClick = onSignIn)
-                    EvSecondaryButton("Create camera account", onClick = onRegister, modifier = Modifier.fillMaxWidth())
+                    EvSecondaryButton(
+                        "Create camera account",
+                        onClick = onRegister,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
             }
         } else {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Go live", style = MaterialTheme.typography.titleLarge, color = EvFg)
                 Text(
                     "One tap fills the screen. Keep the phone plugged in. The room holds about 200 guests. A hotspot beats packed venue Wi‑Fi.",
@@ -187,27 +186,27 @@ private fun HostLiveOverlay(
         modifier
             .fillMaxSize()
             .background(EvBg)
-            .clickable { chrome = true },
+            .clickable { chrome = !chrome },
     ) {
         LiveVideo(track = live.videoTrack, room = live.room, mirror = live.facingFront)
-        Row(
-            Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            StatusBadge(ViewerStatus.LIVE)
-            EvSecondaryButton("Stop", onClick = onStop)
-        }
         if (chrome) {
+            Row(
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                StatusBadge(ViewerStatus.LIVE)
+                EvSecondaryButton("Stop", onClick = onStop)
+            }
             Column(
                 Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .background(EvBg.copy(alpha = 0.72f))
+                    .background(EvBg.copy(alpha = 0.78f))
                     .navigationBarsPadding()
                     .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,

@@ -29,8 +29,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.eventview.app.ui.components.ErrorBanner
 import com.eventview.app.ui.components.EvField
+import com.eventview.app.ui.components.EvOutlineButton
 import com.eventview.app.ui.components.EvPrimaryButton
-import com.eventview.app.ui.components.EvSecondaryButton
 import com.eventview.app.ui.components.EvTextButton
 import com.eventview.app.ui.components.Kicker
 import com.eventview.app.ui.theme.EvBg
@@ -93,11 +93,10 @@ fun SignInScreen(
         EvPrimaryButton(if (busy) "Signing in…" else "Sign in", onClick = ::submit, enabled = !busy)
         if (onGoogle != null && showGoogle(setup)) {
             AuthOrDivider()
-            EvSecondaryButton(
+            EvOutlineButton(
                 if (busy) "Opening Google…" else "Continue with Google",
                 onClick = onGoogle,
                 enabled = !busy,
-                modifier = Modifier.fillMaxWidth(),
             )
         }
         EvTextButton("Create a camera account", onClick = onRegister)
@@ -140,11 +139,10 @@ fun RegisterScreen(
         modifier = modifier,
     ) {
         if (onGoogle != null && showGoogle(setup)) {
-            EvSecondaryButton(
+            EvOutlineButton(
                 if (busy) "Opening Google…" else "Continue with Google",
                 onClick = onGoogle,
                 enabled = !busy,
-                modifier = Modifier.fillMaxWidth(),
             )
             ErrorBanner(error)
             AuthOrDivider("or email")
@@ -256,7 +254,7 @@ private fun AuthShell(
             .fillMaxSize()
             .background(EvBg)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 24.dp),
+            .padding(horizontal = 22.dp, vertical = 28.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Column(

@@ -104,7 +104,7 @@ Point these at a preview deploy only if that deploy has LiveKit + Postgres confi
 
 ### Google Sign-In on Android (no SHA-1)
 
-The debug APK opens Chrome Custom Tabs to `https://yoan-claire-live.vercel.app/android-auth`. That page starts the **existing web** Better Auth Google flow (`/api/auth/callback/google`) and, after Google returns, redirects into the app with a session token (`eventview-debug://oauth?token=…`).
+The debug APK opens Chrome Custom Tabs to `https://yoan-claire-live.vercel.app/android-auth?scheme=eventview-debug&pkg=com.eventview.app.debug`. That page starts the **existing web** Better Auth Google flow (`/api/auth/callback/google`) and, after Google returns, opens the app with a session token via Chrome `intent://` (preferred) or `eventview-debug://oauth?token=…`.
 
 You do **not** need an Android OAuth client or a debug keystore SHA-1 for this path. Those would only be required if we added the native Google SDK / Credential Manager.
 

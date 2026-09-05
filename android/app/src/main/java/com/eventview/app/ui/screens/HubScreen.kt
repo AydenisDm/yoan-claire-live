@@ -19,16 +19,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.eventview.app.ui.components.EvCard
-import com.eventview.app.ui.components.Kicker
+import com.eventview.app.ui.components.ScreenHeader
 import com.eventview.app.ui.theme.EvAccent
 import com.eventview.app.ui.theme.EvAccentFg
 import com.eventview.app.ui.theme.EvBg
 import com.eventview.app.ui.theme.EvFg
 import com.eventview.app.ui.theme.EvRaised
-import com.eventview.app.ui.theme.LocalEvColors
 import com.eventview.app.util.EventViewWindow
 import com.eventview.core.Crowd
-import com.eventview.core.LiveConfig
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -38,23 +36,19 @@ fun HubScreen(
     onChoose: (kind: String, choice: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val pad = if (window.isTablet) 28.dp else 16.dp
-    val colors = LocalEvColors.current
+    val pad = if (window.isTablet) 28.dp else 20.dp
     Column(
         modifier
             .fillMaxSize()
             .background(EvBg)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = pad)
-            .padding(top = 16.dp, bottom = 28.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(top = 20.dp, bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
-        Kicker(LiveConfig.PRODUCT_NAME)
-        Text("Feedback hub", style = MaterialTheme.typography.displayMedium, color = EvFg)
-        Text(
-            "Tap how the stream looks and sounds. No account needed. Clear picture and sound tell the host the room is good.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = colors.muted,
+        ScreenHeader(
+            title = "Hub",
+            subtitle = "Tap how the stream looks and sounds. No account needed. Clear picture and sound tell the host the room is good.",
         )
         Crowd.feedbackGroups.forEach { group ->
             EvCard {

@@ -7,14 +7,12 @@ import com.eventview.core.Crowd
 import com.eventview.core.LiveConfig
 import com.eventview.core.LiveData
 import com.eventview.core.LiveErrorCode
+import com.eventview.core.LiveAudioPolicy
 import com.eventview.core.LiveRole
 import com.eventview.core.ViewerStatus
-import io.livekit.android.LiveKit
-import io.livekit.android.RoomOptions
 import io.livekit.android.events.RoomEvent
 import io.livekit.android.events.collect
 import io.livekit.android.room.Room
-import io.livekit.android.room.participant.RemoteParticipant
 import io.livekit.android.room.track.RemoteVideoTrack
 import io.livekit.android.room.track.Track
 import io.livekit.android.room.track.VideoTrack
@@ -92,14 +90,7 @@ class ViewerController(
 
     fun setMuted(muted: Boolean) {
         _state.update { it.copy(muted = muted) }
-        room?.remoteParticipants?.values?.forEach { participant ->
-            participant.trackPublications.values.forEach { pub ->
-                if (pub.kind == Track.Kind.AUDIO) {
-                    val remote = pub as? io.livekit.android.room.track.RemoteTrackPublication
-                    runCatching { remote?.setEnabled(!muted) }
-                }
-            }
-        }
+        room?.muteRemoteAudio(LiveAudioPolicy.viewerPlaysAudio(muted))
     }
 
     fun sendChat(id: String): Boolean {
@@ -202,13 +193,7 @@ class ViewerController(
         }
         if (closed) return
         _state.update { it.copy(configured = true) }
-        val next = LiveKit.create(
-            app,
-            options = RoomOptions(
-                adaptiveStream = true,
-                dynacast = true,
-            ),
-        )
+        val next = createGuestRoom(app)
         room = next
         _state.update { it.copy(room = next) }
         collectJob = scope.launch { collectEvents(next) }
@@ -227,6 +212,7 @@ class ViewerController(
             return
         }
         hydrateExisting(next)
+        next.muteRemoteAudio(LiveAudioPolicy.viewerPlaysAudio(_state.value.muted))
         report?.let { publishPayload("report", it) }
     }
 
@@ -239,6 +225,9 @@ class ViewerController(
                     val subscribed = event.track
                     if (participant.isEventHost() && subscribed is VideoTrack) {
                         attachVideo(subscribed)
+                    }
+                    if (event.publication.kind == Track.Kind.AUDIO) {
+                        current.muteRemoteAudio(LiveAudioPolicy.viewerPlaysAudio(_state.value.muted))
                     }
                 }
                 is RoomEvent.TrackUnsubscribed -> {

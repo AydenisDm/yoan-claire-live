@@ -35,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -57,8 +58,11 @@ import com.eventview.app.ui.theme.EvAccent
 import com.eventview.app.ui.theme.EvAccentFg
 import com.eventview.app.ui.theme.EvBg
 import com.eventview.app.ui.theme.EvFg
+import com.eventview.app.ui.theme.EvMotion
+import com.eventview.app.ui.theme.EvSurface
 import com.eventview.app.ui.theme.EvSubtle
 import com.eventview.app.ui.theme.EventViewTheme
+import com.eventview.app.ui.theme.rememberReduceMotion
 import com.eventview.app.util.rememberEventViewWindow
 import com.eventview.core.AuthSetupStatus
 import com.eventview.core.Crowd
@@ -134,6 +138,7 @@ fun EventViewApp(
                         (context as? Activity)?.requestPermissions(arrayOf(notif), 0)
                     }
                 }
+                container.viewer.stop()
                 HostLiveService.start(context)
                 container.host.start()
             } else {
@@ -145,6 +150,7 @@ fun EventViewApp(
             val needed = listOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
                 .filter { ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED }
             if (needed.isEmpty()) {
+                container.viewer.stop()
                 HostLiveService.start(context)
                 container.host.start()
             } else {
@@ -192,12 +198,13 @@ fun EventViewApp(
         val route = backStack?.destination?.route
         val hideChrome = inPip || host.live || route in setOf(ROUTE_SIGN_IN, ROUTE_REGISTER, ROUTE_FORGOT)
         val tabs = Tab.entries
+        val reduceMotion = rememberReduceMotion()
 
         Scaffold(
             containerColor = EvBg,
             bottomBar = {
                 if (!hideChrome && !window.useRail) {
-                    NavigationBar(containerColor = EvBg) {
+                    NavigationBar(containerColor = EvSurface, tonalElevation = 0.dp) {
                         tabs.forEach { tab ->
                             NavigationBarItem(
                                 selected = route == tab.route,
@@ -219,7 +226,7 @@ fun EventViewApp(
         ) { padding ->
             Row(Modifier.fillMaxSize()) {
                 if (!hideChrome && window.useRail) {
-                    NavigationRail(containerColor = EvBg, modifier = Modifier.padding(padding)) {
+                    NavigationRail(containerColor = EvSurface, modifier = Modifier.padding(padding)) {
                         tabs.forEach { tab ->
                             NavigationRailItem(
                                 selected = route == tab.route,
@@ -243,6 +250,10 @@ fun EventViewApp(
                     modifier = Modifier
                         .weight(1f)
                         .then(if (hideChrome) Modifier else Modifier.padding(padding)),
+                    enterTransition = { EvMotion.enter(reduceMotion) },
+                    exitTransition = { EvMotion.exit(reduceMotion) },
+                    popEnterTransition = { EvMotion.popEnter(reduceMotion) },
+                    popExitTransition = { EvMotion.popExit(reduceMotion) },
                 ) {
                     composable(Tab.Watch.route) {
                         WatchScreen(
@@ -265,6 +276,7 @@ fun EventViewApp(
                             onStop = {
                                 container.host.stop()
                                 HostLiveService.stop(context)
+                                container.viewer.start()
                             },
                             onFlip = { container.host.flipCamera() },
                             onTorch = { container.host.setTorch(!host.torchOn) },

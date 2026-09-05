@@ -46,6 +46,19 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <layout
+                android:defaultWidth="420dp"
+                android:defaultHeight="800dp"
+                android:minWidth="320dp"
+                android:minHeight="480dp" />
+        </activity>
+
+        <activity
+            android:name=".AuthCallbackActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:noHistory="true"
+            android:theme="@style/Theme.EventView">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -53,11 +66,6 @@
                 <data android:scheme="eventview-debug" android:host="oauth" />
                 <data android:scheme="eventview" android:host="oauth" />
             </intent-filter>
-            <layout
-                android:defaultWidth="420dp"
-                android:defaultHeight="800dp"
-                android:minWidth="320dp"
-                android:minHeight="480dp" />
         </activity>
 
         <service

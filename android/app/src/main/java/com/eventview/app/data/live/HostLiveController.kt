@@ -13,12 +13,12 @@ import com.eventview.core.LiveConfig
 import com.eventview.core.LiveData
 import com.eventview.core.LiveRole
 import com.eventview.core.LiveStats
-import io.livekit.android.LiveKit
-import io.livekit.android.RoomOptions
+import com.eventview.core.LiveAudioPolicy
 import io.livekit.android.events.RoomEvent
 import io.livekit.android.events.collect
 import io.livekit.android.room.Room
 import io.livekit.android.room.track.LocalVideoTrack
+import io.livekit.android.room.track.RemoteTrackPublication
 import io.livekit.android.room.track.Track
 import io.livekit.android.room.track.VideoTrack
 import kotlinx.coroutines.CoroutineScope
@@ -67,6 +67,7 @@ class HostLiveController(
     private val reports = mutableMapOf<String, String>()
     private var peakViewers = 0
     private var startedAt = 0L
+    private val audioSession = HostAudioSession(app)
 
     val isLive: Boolean get() = _state.value.live
 
@@ -79,9 +80,11 @@ class HostLiveController(
             try {
                 connect(password)
             } catch (err: LiveException) {
+                audioSession.leave()
                 _state.update { it.copy(starting = false, live = false, error = err.failure.message) }
                 closed = true
             } catch (err: Exception) {
+                audioSession.leave()
                 _state.update {
                     it.copy(
                         starting = false,
@@ -104,6 +107,7 @@ class HostLiveController(
         starting = false
         reconnectJob?.cancel()
         collectJob?.cancel()
+        audioSession.leave()
         scope.launch {
             val current = room
             room = null
@@ -176,20 +180,17 @@ class HostLiveController(
         if (closed) return
         val creds = tokens.mint(LiveRole.HOST, password = password)
         if (closed) return
-        val next = LiveKit.create(
-            app,
-            options = RoomOptions(
-                adaptiveStream = false,
-                dynacast = true,
-            ),
-        )
+        audioSession.enter()
+        val next = createHostRoom(app)
         room = next
         collectJob = scope.launch { collectEvents(next) }
         next.connect(creds.url, creds.token)
         if (closed) {
+            audioSession.leave()
             runCatching { next.disconnect() }
             return
         }
+        silenceHostPlayback(next)
         next.localParticipant.setCameraEnabled(true)
         next.localParticipant.setMicrophoneEnabled(true)
         if (closed) return
@@ -241,6 +242,14 @@ class HostLiveController(
                             it.copy(videoTrack = event.publication.track as? VideoTrack)
                         }
                     }
+                    if (event.publication.kind == Track.Kind.AUDIO) {
+                        silenceHostPlayback(current)
+                    }
+                }
+                is RoomEvent.TrackSubscribed -> {
+                    if (event.publication.kind == Track.Kind.AUDIO) {
+                        silenceHostPlayback(current)
+                    }
                 }
                 else -> Unit
             }
@@ -284,6 +293,18 @@ class HostLiveController(
             if (closed) return@launch
             runCatching { connect(null) }.onFailure {
                 if (!closed) scheduleReconnect()
+            }
+        }
+    }
+
+    private fun silenceHostPlayback(current: Room) {
+        if (LiveAudioPolicy.hostPlaysRemoteAudio()) return
+        current.muteRemoteAudio(play = false)
+        current.remoteParticipants.values.forEach { participant ->
+            participant.trackPublications.values.forEach { pub ->
+                if (pub.kind == Track.Kind.AUDIO) {
+                    runCatching { (pub as? RemoteTrackPublication)?.setSubscribed(false) }
+                }
             }
         }
     }

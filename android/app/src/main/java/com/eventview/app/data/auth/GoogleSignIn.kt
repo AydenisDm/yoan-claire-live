@@ -14,16 +14,20 @@ object GoogleSignIn {
             .setShareState(CustomTabsIntent.SHARE_STATE_OFF)
             .setUrlBarHidingEnabled(true)
             .build()
-        tabs.intent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY)
+        // Do not use FLAG_ACTIVITY_NO_HISTORY — Chrome then drops the
+        // eventview-debug:// / intent:// return into a dead task.
+        tabs.intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         tabs.launchUrl(context, uri)
     }
 
     fun tokenFrom(intent: Intent?): String? {
         val data = intent?.data ?: return null
-        return AndroidAuth.parseCallbackToken(
+        val query = data.getQueryParameter(AndroidAuth.TOKEN_QUERY)
+        return AndroidAuth.tokenFromParts(
             scheme = data.scheme,
             host = data.host,
-            token = data.getQueryParameter(AndroidAuth.TOKEN_QUERY),
+            queryToken = query,
+            fragment = data.fragment,
         )
     }
 }

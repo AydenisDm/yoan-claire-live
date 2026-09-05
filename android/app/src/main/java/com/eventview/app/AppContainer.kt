@@ -25,7 +25,7 @@ class AppContainer(app: Application) {
     val host = HostLiveController(app, tokens, archive)
     val viewer = ViewerController(app, tokens, sessionStore)
 
-    private val googleTokenSink = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    private val googleTokenSink = MutableSharedFlow<String>(replay = 1, extraBufferCapacity = 1)
     val googleTokens: SharedFlow<String> = googleTokenSink
 
     fun offerGoogleToken(token: String) {

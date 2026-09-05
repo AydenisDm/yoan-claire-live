@@ -16,7 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.eventview.app.ui.components.EvCard
 import com.eventview.app.ui.components.EvSecondaryButton
-import com.eventview.app.ui.components.Kicker
+import com.eventview.app.ui.components.ScreenHeader
 import com.eventview.app.ui.theme.EvBg
 import com.eventview.app.ui.theme.EvFg
 import com.eventview.app.ui.theme.LocalEvColors
@@ -24,7 +24,6 @@ import com.eventview.app.util.EventViewWindow
 import com.eventview.app.util.formatDuration
 import com.eventview.app.util.formatWhen
 import com.eventview.core.ArchiveSession
-import com.eventview.core.LiveConfig
 
 @Composable
 fun ArchiveScreen(
@@ -34,21 +33,18 @@ fun ArchiveScreen(
     onShare: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val pad = if (window.isTablet) 28.dp else 16.dp
+    val pad = if (window.isTablet) 28.dp else 20.dp
     Column(
         modifier
             .fillMaxSize()
             .background(EvBg)
             .padding(horizontal = pad)
-            .padding(top = 16.dp),
+            .padding(top = 20.dp),
     ) {
-        Kicker(LiveConfig.PRODUCT_NAME)
-        Text("Archive", style = MaterialTheme.typography.displayMedium, color = EvFg)
-        Text(
-            "Lives you stop on this phone land here — time, length, and how many people were watching.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = LocalEvColors.current.muted,
-            modifier = Modifier.padding(top = 6.dp, bottom = 16.dp),
+        ScreenHeader(
+            title = "Archive",
+            subtitle = "Lives you stop on this phone land here — time, length, and how many people were watching.",
+            modifier = Modifier.padding(bottom = 20.dp),
         )
         if (items.isEmpty()) {
             EvCard {
