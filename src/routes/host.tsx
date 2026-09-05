@@ -18,7 +18,7 @@ function HostPage() {
   const { user, isPending } = useCurrentUserState();
   if (isPending) {
     return (
-      <main className="min-h-dvh bg-bg px-5 pt-[max(2rem,env(safe-area-inset-top))]">
+      <main className="ev-page min-h-dvh bg-bg px-5 pt-[max(2rem,env(safe-area-inset-top))]">
         <p className="text-sm text-muted">Loading account…</p>
       </main>
     );
@@ -72,7 +72,7 @@ function HostConsole() {
   };
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-3xl flex-col gap-6 px-4 pt-[max(2rem,env(safe-area-inset-top))] pb-28 sm:px-6">
+    <main className="ev-page mx-auto flex min-h-dvh max-w-3xl flex-col gap-6 px-4 pt-[max(2rem,env(safe-area-inset-top))] pb-28 sm:px-6">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs tracking-[0.28em] text-subtle uppercase">{eventConfig.productName}</p>
@@ -96,6 +96,7 @@ function HostConsole() {
           className={cn(
             "mt-4 min-h-16 w-full resize-none rounded-md border border-border bg-raised px-3 py-2",
             "text-base leading-relaxed text-fg shadow-none outline-none",
+            "transition-[border-color,box-shadow] duration-quick ease-snappy",
             "focus-visible:border-accent/50 focus-visible:ring-2 focus-visible:ring-accent/30",
           )}
           onFocus={(e) => e.currentTarget.select()}

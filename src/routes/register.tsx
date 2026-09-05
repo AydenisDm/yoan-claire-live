@@ -77,7 +77,7 @@ function Register() {
       } catch {
         // session store recovers
       }
-      await navigate({ to: "/host", replace: true });
+      await navigate({ to: "/host", replace: true, viewTransition: true });
     } catch (err) {
       setFormError(describeAuthError(err, "Could not create the account."));
     } finally {
@@ -166,7 +166,11 @@ function Register() {
             </Button>
             <p className="pt-1 text-center text-sm text-muted">
               Already have an account?{" "}
-              <Link to="/login" className="text-fg underline-offset-4 hover:underline">
+              <Link
+                to="/login"
+                viewTransition
+                className="text-fg underline-offset-4 transition-colors duration-quick ease-snappy hover:underline"
+              >
                 Sign in
               </Link>
             </p>

@@ -52,31 +52,25 @@
   [role="button"]:not(:disabled),
   a { cursor: pointer; touch-action: manipulation; }
   input, textarea, select { font-size: 1rem; }
-  /* Waiting LED: opacity only, no scale bounce, short cycle. */
-  .wait-dot {
-    animation: wait-blink 720ms cubic-bezier(0.2, 0, 0, 1) infinite;
-  }
-  @keyframes wait-blink {
-    0%, 62% { opacity: 1; }
-    78% { opacity: 0.22; }
-    100% { opacity: 1; }
-  }
+  /* Status dots stay still — loops read as decoration, not confidence. */
+  .wait-dot,
   .live-dot {
-    animation: live-blink 900ms cubic-bezier(0.2, 0, 0, 1) infinite;
-  }
-  @keyframes live-blink {
-    0%, 70% { opacity: 1; }
-    82% { opacity: 0.35; }
-    100% { opacity: 1; }
+    opacity: 1;
   }
   .ev-skeleton {
-    animation: ev-skeleton 720ms linear infinite;
+    animation: ev-skeleton 640ms linear infinite;
   }
   @keyframes ev-skeleton {
     50% { opacity: 0.55; }
   }
   .ev-chrome {
-    transition: opacity 160ms cubic-bezier(0.2, 0, 0, 1);
+    transition: opacity 140ms cubic-bezier(0.2, 0, 0, 1);
+  }
+  .ev-page {
+    view-transition-name: ev-page;
+  }
+  .ev-tabs {
+    view-transition-name: ev-tabs;
   }
   .live-stage {
     overscroll-behavior: none;
@@ -86,11 +80,40 @@
   .live-video {
     transform: translateZ(0);
   }
+
+  /* Tab / auth page swaps: 160ms opacity only, no slide or stagger. */
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 160ms;
+    animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  }
+  ::view-transition-old(ev-page) {
+    animation: ev-page-out 160ms cubic-bezier(0.2, 0, 0, 1) both;
+  }
+  ::view-transition-new(ev-page) {
+    animation: ev-page-in 160ms cubic-bezier(0.2, 0, 0, 1) both;
+  }
+  @keyframes ev-page-out {
+    to { opacity: 0; }
+  }
+  @keyframes ev-page-in {
+    from { opacity: 0; }
+  }
+  ::view-transition-old(ev-tabs),
+  ::view-transition-new(ev-tabs) {
+    animation: none;
+    mix-blend-mode: normal;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .wait-dot,
     .live-dot,
     .ev-skeleton { animation: none; }
     .ev-chrome { transition: none; }
+    ::view-transition-old(*),
+    ::view-transition-new(*) {
+      animation: none !important;
+    }
     button,
     [role="button"],
     a,

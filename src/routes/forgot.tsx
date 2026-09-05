@@ -17,10 +17,14 @@ function Forgot() {
           one stays unused.
         </p>
         <Button asChild size="lg" className="w-full">
-          <Link to="/login">Back to host sign in</Link>
+          <Link to="/login" viewTransition>
+            Back to host sign in
+          </Link>
         </Button>
         <Button asChild variant="secondary" size="lg" className="w-full">
-          <Link to="/register">Create a new camera account</Link>
+          <Link to="/register" viewTransition>
+            Create a new camera account
+          </Link>
         </Button>
       </div>
     </AccountScreen>

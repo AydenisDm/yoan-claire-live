@@ -30,7 +30,7 @@ function Login() {
     } catch {
       // session store recovers
     }
-    await navigate({ to: "/host", replace: true });
+    await navigate({ to: "/host", replace: true, viewTransition: true });
   };
 
   const onSocial = async (id: SocialId) => {
@@ -126,7 +126,11 @@ function Login() {
               error={fieldErrors.password}
             />
             <p className="text-right text-sm">
-              <Link to="/forgot" className="text-muted underline-offset-4 hover:text-fg hover:underline">
+              <Link
+                to="/forgot"
+                viewTransition
+                className="text-muted underline-offset-4 transition-colors duration-quick ease-snappy hover:text-fg hover:underline"
+              >
                 Forgot password?
               </Link>
             </p>
@@ -137,7 +141,11 @@ function Login() {
 
           <p className="pt-1 text-center text-sm text-muted">
             New here?{" "}
-            <Link to="/register" className="text-fg underline-offset-4 hover:underline">
+            <Link
+              to="/register"
+              viewTransition
+              className="text-fg underline-offset-4 transition-colors duration-quick ease-snappy hover:underline"
+            >
               Create a camera account
             </Link>
           </p>

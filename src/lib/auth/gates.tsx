@@ -41,7 +41,7 @@ export function SignedOut({ children }: { children: ReactNode }) {
  * render this.
  */
 export function RedirectToSignIn({ to = SIGN_IN_PATH }: { to?: string }) {
-  return <Navigate to={to} />;
+  return <Navigate to={to} viewTransition />;
 }
 
 /**

@@ -82,12 +82,20 @@ function PlayerShell({
           )}
         </Badge>
       </div>
-      {status === "live" && muted && onUnmute ? (
-        <div className="ev-chrome absolute inset-0 z-20 flex items-end justify-center bg-bg/55 p-4 pb-6">
+      {onUnmute ? (
+        <div
+          className={cn(
+            "ev-chrome absolute inset-0 z-20 flex items-end justify-center bg-bg/55 p-4 pb-6",
+            status === "live" && muted
+              ? "opacity-100"
+              : "pointer-events-none opacity-0",
+          )}
+          aria-hidden={!(status === "live" && muted)}
+        >
           <Button
             type="button"
             size="lg"
-            className="pointer-events-auto shadow-lg"
+            className="shadow-lg"
             onClick={onUnmute}
           >
             <Volume2 />
@@ -194,21 +202,25 @@ function WebRtcViewer() {
         onFullscreen={fullscreen}
       >
         <div ref={wrapRef} className="relative aspect-video w-full bg-raised">
-          {status !== "live" ? (
-            <div className="absolute inset-0 z-10">
-              <WaitingRoom
-                status={
-                  status === "reconnecting"
-                    ? "reconnecting"
-                    : status === "full"
-                      ? "full"
-                      : status === "offline"
-                        ? "offline"
-                        : "waiting"
-                }
-              />
-            </div>
-          ) : null}
+          <div
+            className={cn(
+              "ev-chrome absolute inset-0 z-10",
+              status !== "live" ? "opacity-100" : "pointer-events-none opacity-0",
+            )}
+            aria-hidden={status === "live"}
+          >
+            <WaitingRoom
+              status={
+                status === "reconnecting"
+                  ? "reconnecting"
+                  : status === "full"
+                    ? "full"
+                    : status === "offline"
+                      ? "offline"
+                      : "waiting"
+              }
+            />
+          </div>
           <video
             ref={videoRef}
             className="h-full w-full bg-raised object-contain"
@@ -432,13 +444,17 @@ function HlsPlayer({ src }: { src: string }) {
       onFullscreen={fullscreen}
     >
       <div ref={wrapRef} className="relative aspect-video w-full bg-raised">
-        {status !== "live" ? (
-          <div className="absolute inset-0 z-10">
-            <WaitingRoom
-              status={status === "reconnecting" ? "reconnecting" : "waiting"}
-            />
-          </div>
-        ) : null}
+        <div
+          className={cn(
+            "ev-chrome absolute inset-0 z-10",
+            status !== "live" ? "opacity-100" : "pointer-events-none opacity-0",
+          )}
+          aria-hidden={status === "live"}
+        >
+          <WaitingRoom
+            status={status === "reconnecting" ? "reconnecting" : "waiting"}
+          />
+        </div>
         <video
           ref={videoRef}
           className="h-full w-full object-contain"

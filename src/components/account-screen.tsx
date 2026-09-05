@@ -47,7 +47,7 @@ export function AccountScreen({
   }, []);
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-start px-5 pr-16 pt-[max(3.5rem,calc(env(safe-area-inset-top)+2rem))] pb-28 sm:justify-center sm:pr-8">
+    <main className="ev-page mx-auto flex min-h-dvh max-w-md flex-col justify-start px-5 pr-16 pt-[max(3.5rem,calc(env(safe-area-inset-top)+2rem))] pb-28 sm:justify-center sm:pr-8">
       <p className="mb-2 text-center text-xs tracking-[0.28em] text-subtle uppercase">
         {eventConfig.productName}
       </p>
@@ -56,7 +56,9 @@ export function AccountScreen({
       {guestCta ? (
         <div className="mt-8 space-y-2">
           <Button asChild variant="secondary" size="lg" className="w-full">
-            <Link to="/">Watch as guest</Link>
+            <Link to="/" viewTransition>
+              Watch as guest
+            </Link>
           </Button>
           <p className="text-center text-xs text-subtle">No account. You only watch.</p>
         </div>
@@ -64,7 +66,11 @@ export function AccountScreen({
       {children}
       {!guestCta ? (
         <p className="mt-10 text-center">
-          <Link to="/" className="text-sm text-muted underline-offset-4 hover:underline">
+          <Link
+            to="/"
+            viewTransition
+            className="text-sm text-muted underline-offset-4 transition-colors duration-quick ease-snappy hover:text-fg hover:underline"
+          >
             Watch as guest
           </Link>
         </p>

@@ -3,7 +3,7 @@ import { TriangleAlert } from "lucide-react";
 
 export function AppErrorComponent({ error }: ErrorComponentProps) {
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-bg px-6 text-center text-fg">
+    <main className="ev-page flex min-h-dvh flex-col items-center justify-center gap-3 bg-bg px-6 text-center text-fg">
       <span className="text-warn" aria-hidden="true">
         <TriangleAlert className="size-10" strokeWidth={2} />
       </span>

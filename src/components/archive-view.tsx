@@ -52,7 +52,7 @@ export function ArchiveView() {
 
   if (isPending) {
     return (
-      <main className="min-h-dvh bg-bg px-5 pt-[max(2rem,env(safe-area-inset-top))]">
+      <main className="ev-page min-h-dvh bg-bg px-5 pt-[max(2rem,env(safe-area-inset-top))]">
         <p className="text-sm text-muted">Loading account…</p>
       </main>
     );
@@ -106,7 +106,7 @@ export function ArchiveView() {
   };
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-3xl flex-col gap-6 px-4 pt-[max(2rem,env(safe-area-inset-top))] pb-28 sm:px-6">
+    <main className="ev-page mx-auto flex min-h-dvh max-w-3xl flex-col gap-6 px-4 pt-[max(2rem,env(safe-area-inset-top))] pb-28 sm:px-6">
       <header className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs tracking-[0.28em] text-subtle uppercase">{eventConfig.productName}</p>
