@@ -1,15 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, Copy } from "lucide-react";
-import { useState } from "react";
+import { Check, Copy, Share2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { GoLive } from "@/components/go-live";
 import { TabBar } from "@/components/tab-bar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { RedirectToSignIn, UserButton } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { eventConfig } from "@/lib/event-config";
-import { copyWatchLink } from "@/lib/live-broadcast";
+import { guestSharePayload } from "@/lib/guest-share";
+import { copyWatchLink, shareWatchLink } from "@/lib/live-broadcast";
 import { useLiveSetup } from "@/lib/live-setup";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/host")({ ssr: false, component: HostPage });
 
@@ -28,9 +29,26 @@ function HostPage() {
 
 function HostConsole() {
   const [copied, setCopied] = useState(false);
+  const [shared, setShared] = useState(false);
   const [copyError, setCopyError] = useState(false);
   const { status: liveSetup, loading: liveLoading } = useLiveSetup();
-  const watchUrl = typeof window === "undefined" ? "/" : `${window.location.origin}/`;
+  const share = guestSharePayload();
+  const [canNativeShare, setCanNativeShare] = useState(false);
+
+  useEffect(() => {
+    setCanNativeShare(typeof navigator.share === "function");
+  }, []);
+
+  const markOk = (kind: "copied" | "shared") => {
+    setCopyError(false);
+    if (kind === "copied") {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } else {
+      setShared(true);
+      window.setTimeout(() => setShared(false), 2000);
+    }
+  };
 
   const copyWatch = async () => {
     const result = await copyWatchLink();
@@ -40,9 +58,17 @@ function HostConsole() {
       return;
     }
     if (result === "cancelled") return;
-    setCopyError(false);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 2000);
+    markOk(result === "shared" ? "shared" : "copied");
+  };
+
+  const shareWatch = async () => {
+    const result = await shareWatchLink();
+    if (result === "failed") {
+      setCopyError(true);
+      return;
+    }
+    if (result === "cancelled") return;
+    markOk(result === "copied" ? "copied" : "shared");
   };
 
   return (
@@ -57,26 +83,47 @@ function HostConsole() {
       </header>
 
       <section className="rounded-xl border border-border bg-surface p-4 sm:p-5">
-        <h2 className="font-serif text-xl text-fg">Guest watch link</h2>
+        <h2 className="font-serif text-xl text-fg">EventView guest link</h2>
         <p className="mt-1 text-sm text-muted">
-          Send this. Guests never sign in. Stopping a live saves a clip to Archive on this
-          phone.
+          Copy or share this EventView invite. Guests never sign in. The address stays
+          the production site; the message is what they see.
         </p>
-        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Input
-            readOnly
-            value={watchUrl}
-            aria-label="Watch link"
-            className="min-w-0 flex-1"
-            onFocus={(e) => e.currentTarget.select()}
-          />
-          <Button type="button" onClick={() => void copyWatch()} className="w-full shrink-0 sm:w-auto">
+        <textarea
+          readOnly
+          value={share.text}
+          aria-label="EventView guest invite"
+          rows={2}
+          className={cn(
+            "mt-4 min-h-16 w-full resize-none rounded-md border border-border bg-raised px-3 py-2",
+            "text-base leading-relaxed text-fg shadow-none outline-none",
+            "focus-visible:border-accent/50 focus-visible:ring-2 focus-visible:ring-accent/30",
+          )}
+          onFocus={(e) => e.currentTarget.select()}
+        />
+        <p className="mt-2 text-xs text-subtle">
+          The production address is unchanged — only the invite wording says EventView.
+        </p>
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Button type="button" onClick={() => void copyWatch()} className="w-full sm:w-auto">
             {copied ? <Check /> : <Copy />}
-            {copied ? "Copied" : "Copy link"}
+            {copied ? "Copied" : "Copy invite"}
           </Button>
+          {canNativeShare ? (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => void shareWatch()}
+              className="w-full sm:w-auto"
+            >
+              {shared ? <Check /> : <Share2 />}
+              {shared ? "Opened share" : "Share"}
+            </Button>
+          ) : null}
         </div>
         {copyError ? (
-          <p className="mt-2 text-sm text-warn">Copy failed. Select the link and share it yourself.</p>
+          <p className="mt-2 text-sm text-warn">
+            Copy failed. Select the EventView invite and share it yourself.
+          </p>
         ) : null}
       </section>
 

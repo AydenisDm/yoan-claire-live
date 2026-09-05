@@ -43,7 +43,7 @@ export function FeedbackHub() {
             ? "Loading…"
             : user
               ? "What guests are reporting from the watch page."
-              : "Tap how the stream looks and sounds. No account needed."}
+              : "Tap how the picture looks and sounds. No account needed."}
         </p>
       </header>
 

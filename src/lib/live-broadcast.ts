@@ -1,6 +1,6 @@
 import { AudioPresets, ConnectionState, Room, RoomEvent, Track, VideoPresets, VideoQuality, type LocalTrackPublication, type RemoteParticipant, type RemoteTrack, type RemoteTrackPublication } from "livekit-client";
 import { chatLabel, isChatId, type ChatLine } from "@/lib/crowd";
-import { eventConfig } from "@/lib/event-config";
+import { guestSharePayload } from "@/lib/guest-share";
 import {
   HOST_IDENTITY,
   PRODUCTION_LIVE_API,
@@ -172,20 +172,33 @@ export async function toggleTorch(stream: MediaStream, on: boolean) {
 }
 
 export async function copyWatchLink() {
-  const url = `${window.location.origin}/`;
+  const { title, text, url } = guestSharePayload();
   try {
-    await navigator.clipboard.writeText(url);
+    await navigator.clipboard.writeText(text);
     return "copied" as const;
   } catch {
     if (typeof navigator.share !== "function") return "failed" as const;
     try {
-      await navigator.share({ title: `Watch on ${eventConfig.productName}`, url });
+      await navigator.share({ title, text, url });
       return "shared" as const;
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") return "cancelled" as const;
       return "failed" as const;
     }
   }
+}
+
+export async function shareWatchLink() {
+  const { title, text, url } = guestSharePayload();
+  if (typeof navigator.share === "function") {
+    try {
+      await navigator.share({ title, text, url });
+      return "shared" as const;
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return "cancelled" as const;
+    }
+  }
+  return copyWatchLink();
 }
 
 export class StreamerBroadcast {
