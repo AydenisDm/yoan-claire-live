@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">EventView</string>
+    <string name="live_notification_title">EventView is live</string>
+    <string name="live_notification_text">Guests can watch. Keep this phone awake and charged.</string>
+    <string name="live_notification_stop">Stop</string>
+    <string name="channel_live_name">Host live</string>
+    <string name="channel_live_desc">Shown while you are filming so the stream stays up if the screen locks.</string>
+</resources>

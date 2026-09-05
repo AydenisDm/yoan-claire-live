@@ -1,0 +1,9 @@
+## Copy to local.properties (never commit that file).
+## Android Studio writes sdk.dir automatically.
+
+# sdk.dir=/Users/you/Library/Android/sdk
+# sdk.dir=C\:\\Users\\you\\AppData\\Local\\Android\\Sdk
+
+# Optional: point the app at another EventView deploy (no trailing slash).
+# EVENTVIEW_API_BASE=https://yoan-claire-live.vercel.app
+# EVENTVIEW_WATCH_URL=https://yoan-claire-live.vercel.app/

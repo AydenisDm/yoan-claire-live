@@ -4,6 +4,10 @@ Private live event watch page. The host opens **Live**, signs in or creates a ca
 
 The filming phone publishes **once** into LiveKit Cloud (an SFU). Guests subscribe from the SFU — not a peer-to-peer mesh — so about **200 concurrent viewers** is the designed load. This website stays on Vercel.
 
+## Android app
+
+A native Kotlin + Jetpack Compose client lives in [`android/`](android/). Guests watch without an account; hosts sign in to the same Better Auth + LiveKit token API as this website (`https://yoan-claire-live.vercel.app`). Open the `android/` folder in Android Studio. Setup, secrets, and phone/tablet test steps: [`android/README.md`](android/README.md).
+
 ## Two links
 
 | Who | Where | What they do |
