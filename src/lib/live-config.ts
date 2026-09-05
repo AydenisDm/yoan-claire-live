@@ -54,6 +54,27 @@ export function authorizeHostToken(input: {
   return hostMayGoLive(input.signedIn);
 }
 
+/** Canonical guest watch URL. Vercel slug stays; share copy says EventView. */
+export function guestWatchUrl(origin: string = PRODUCTION_ORIGIN) {
+  return `${origin.replace(/\/$/, "")}/`;
+}
+
+export function guestShareTitle(productName = "EventView") {
+  return `Watch live on ${productName}`;
+}
+
+export function guestShareText(productName = "EventView", origin: string = PRODUCTION_ORIGIN) {
+  return `${guestShareTitle(productName)}\n${guestWatchUrl(origin)}`;
+}
+
+export function guestSharePayload(productName = "EventView", origin: string = PRODUCTION_ORIGIN) {
+  return {
+    title: guestShareTitle(productName),
+    text: guestShareText(productName, origin),
+    url: guestWatchUrl(origin),
+  };
+}
+
 export function guestIdentity() {
   if (typeof sessionStorage === "undefined") {
     return `g-${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`;

@@ -8,8 +8,8 @@ The filming phone publishes **once** into LiveKit Cloud (an SFU). Guests subscri
 
 | Who | Where | What they do |
 |---|---|---|
-| Guests | `/` | Watch. No account. No camera. Send a ready-made chat note when live. |
-| Host | `/host` | Sign in or [create an account](/register), copy the guest link, tap Go live |
+| Guests | `/` | Watch on EventView. No account. No camera. Send a ready-made chat note when live. |
+| Host | `/host` | Sign in or [create an account](/register), copy the EventView guest invite, tap Go live |
 
 ## Camera account (register + login)
 
@@ -69,7 +69,7 @@ Password Protection / Trusted IPs, if enabled, will also block testers.
 
 1. Charge the filming phone. Prefer hotspot over venue Wi-Fi. Disable auto-lock.
 2. Sign in on Live (or create an account).
-3. Copy the guest link and send it.
+3. Copy the EventView guest invite (`Watch live on EventView` plus the production URL) and send it.
 4. Tap **Go live**. Allow camera and mic. Keep that tab open.
 5. If it drops, tap Go live again. Guests stay on the same link.
 

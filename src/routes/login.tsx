@@ -109,7 +109,6 @@ function Login() {
             <PasswordField
               id="login-password"
               label="Password"
-              hint="At least 8 characters."
               autoComplete="current-password"
               name="password"
               value={password}

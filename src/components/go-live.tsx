@@ -1,4 +1,4 @@
-import { Copy, Flashlight, FlashlightOff, FlipHorizontal2, Radio, Square } from "lucide-react";
+import { Copy, Flashlight, FlashlightOff, FlipHorizontal2, Radio, Share2, Square } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import {
   LiveConfigError,
   cameraHasTorch,
   copyWatchLink,
+  shareWatchLink,
   openCamera,
   StreamerBroadcast,
   toggleTorch,
@@ -232,9 +233,10 @@ export function GoLive() {
   };
 
   const shareLink = async () => {
-    const result = await copyWatchLink();
+    const share = typeof navigator.share === "function" ? shareWatchLink : copyWatchLink;
+    const result = await share();
     if (result === "failed") {
-      setError("Could not copy the watch link. Share the site address instead.");
+      setError("Could not copy the EventView invite. Share the site address instead.");
       return;
     }
     if (result === "cancelled") return;
@@ -309,8 +311,8 @@ export function GoLive() {
                 </Button>
               ) : null}
               <Button type="button" variant="secondary" onClick={() => void shareLink()}>
-                <Copy />
-                {copied ? "Copied" : "Copy link"}
+                {copied ? <Copy /> : <Share2 />}
+                {copied ? "Copied" : "Share"}
               </Button>
             </div>
           </div>

@@ -6,6 +6,7 @@ import {
   PRODUCTION_LIVE_API,
   PRODUCTION_ORIGIN,
   guestIdentity,
+  guestSharePayload,
 } from "@/lib/live-config";
 
 export type LiveStats = {
@@ -172,20 +173,33 @@ export async function toggleTorch(stream: MediaStream, on: boolean) {
 }
 
 export async function copyWatchLink() {
-  const url = `${window.location.origin}/`;
+  const { title, text, url } = guestSharePayload(eventConfig.productName);
   try {
-    await navigator.clipboard.writeText(url);
+    await navigator.clipboard.writeText(text);
     return "copied" as const;
   } catch {
     if (typeof navigator.share !== "function") return "failed" as const;
     try {
-      await navigator.share({ title: `Watch on ${eventConfig.productName}`, url });
+      await navigator.share({ title, text, url });
       return "shared" as const;
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") return "cancelled" as const;
       return "failed" as const;
     }
   }
+}
+
+export async function shareWatchLink() {
+  const { title, text, url } = guestSharePayload(eventConfig.productName);
+  if (typeof navigator.share === "function") {
+    try {
+      await navigator.share({ title, text, url });
+      return "shared" as const;
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return "cancelled" as const;
+    }
+  }
+  return copyWatchLink();
 }
 
 export class StreamerBroadcast {

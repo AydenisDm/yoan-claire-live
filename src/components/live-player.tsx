@@ -299,7 +299,7 @@ function YouTubePlayer({ videoId }: { videoId: string }) {
       <div ref={wrapRef} className="aspect-video w-full bg-raised">
         <iframe
           ref={iframeRef}
-          title="Live stream"
+          title="EventView live"
           src={src}
           className="h-full w-full border-0"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"

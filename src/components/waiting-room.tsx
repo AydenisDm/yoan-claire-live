@@ -24,8 +24,8 @@ export function WaitingRoom({
               body: "Leave this page open. When the host goes live, the picture appears here.",
             }
           : {
-              title: "The stream will begin shortly",
-              body: "Leave this page open. When the event goes live, the picture appears here.",
+              title: "The live picture will begin shortly",
+              body: "Leave this page open. When the event goes live on EventView, the picture appears here.",
             };
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-raised px-5 py-8 text-center sm:gap-3 sm:px-6">

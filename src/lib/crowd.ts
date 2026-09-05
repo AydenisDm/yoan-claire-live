@@ -28,7 +28,7 @@ export const FEEDBACK_GROUPS = [
   },
   {
     kind: "moment",
-    title: "The stream",
+    title: "The event",
     options: [
       { id: "great", label: "Great" },
       { id: "moving", label: "Moving" },
