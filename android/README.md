@@ -24,6 +24,8 @@ The app sends `Origin: <API base>` and, after sign-in, `Authorization: Bearer <s
 
 Chat and “can you see clearly?” use the same LiveKit data payloads as the web app: `{ "t": "chat"|"report", "v": "…" }`.
 
+**No Android Studio?** Sideload the debug APK — see [INSTALL.md](INSTALL.md) (Windows steps included).
+
 ## Open in Android Studio
 
 1. Install [Android Studio](https://developer.android.com/studio) (Ladybug / Narwhal or newer) with the Android SDK.
