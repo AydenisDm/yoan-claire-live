@@ -53,6 +53,8 @@ import com.eventview.app.ui.theme.EvSurface
 import com.eventview.app.ui.theme.LocalEvColors
 import com.eventview.app.ui.theme.LocalTouchTarget
 import com.eventview.core.ViewerStatus
+import com.eventview.core.body
+import com.eventview.core.title
 
 @Composable
 fun EvCard(

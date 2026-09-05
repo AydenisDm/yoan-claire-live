@@ -55,10 +55,11 @@ class SessionStore(private val context: Context) {
             prefs[userIdKey] = session.user.id
             session.user.email?.let { prefs[emailKey] = it }
             session.user.name?.let { prefs[nameKey] = it }
-            if (session.token.isNullOrBlank()) {
+            val token = session.token
+            if (token.isNullOrBlank()) {
                 prefs.remove(tokenKey)
             } else {
-                prefs[tokenKey] = session.token
+                prefs[tokenKey] = token
             }
         }
     }

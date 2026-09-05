@@ -95,7 +95,8 @@ class ViewerController(
         room?.remoteParticipants?.values?.forEach { participant ->
             participant.trackPublications.values.forEach { pub ->
                 if (pub.kind == Track.Kind.AUDIO) {
-                    pub.track?.let { runCatching { if (muted) pub.setEnabled(false) else pub.setEnabled(true) } }
+                    val remote = pub as? io.livekit.android.room.track.RemoteTrackPublication
+                    runCatching { remote?.setEnabled(!muted) }
                 }
             }
         }
@@ -235,10 +236,9 @@ class ViewerController(
             when (event) {
                 is RoomEvent.TrackSubscribed -> {
                     val participant = event.participant
-                    if (participant is RemoteParticipant && participant.isEventHost()) {
-                        if (event.track is VideoTrack) {
-                            attachVideo(event.track as VideoTrack)
-                        }
+                    val subscribed = event.track
+                    if (participant.isEventHost() && subscribed is VideoTrack) {
+                        attachVideo(subscribed)
                     }
                 }
                 is RoomEvent.TrackUnsubscribed -> {

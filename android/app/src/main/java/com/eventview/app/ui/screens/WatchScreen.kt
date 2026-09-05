@@ -19,7 +19,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.VolumeUp
+import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -210,7 +210,7 @@ private fun PlayerStage(
                     .padding(8.dp)
                     .background(EvBg.copy(alpha = 0.55f), RoundedCornerShape(12.dp)),
             ) {
-                Icon(Icons.Outlined.VolumeUp, contentDescription = "Sound on", tint = EvFg)
+                Icon(Icons.AutoMirrored.Outlined.VolumeUp, contentDescription = "Sound on", tint = EvFg)
             }
         }
     }
