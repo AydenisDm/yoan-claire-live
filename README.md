@@ -18,7 +18,7 @@ Hosts use **email and password** on this app's own Better Auth (not a third-part
 1. Open **Live** (or `/register`).
 2. Create a camera account: name, email, password (8+ characters). You are signed in immediately and land on Live.
 3. Next time, sign in at `/login` with the same email and password.
-4. Tap **Go live**. Signed in is enough — you do not need a separate host password.
+4. Tap **Go live**. Signed in is enough — the API will not mint a host token without that session.
 
 Google / X only show on Grok sandbox hosts, or when this project has its own `GROK_AUTH_CLIENT_ID`. They are not the path to test on Vercel.
 
@@ -90,9 +90,14 @@ This fits Vercel hosting: the site only mints short-lived room tokens (`LIVEKIT_
 - `LIVEKIT_URL` — `wss://your-project.livekit.cloud`
 - `LIVEKIT_API_KEY`
 - `LIVEKIT_API_SECRET`
-- Optional: `HOST_PASSWORD` — fallback host gate if you want a secret that is not in the page
 
-Optional labels: `VITE_EVENT_NAME`, `VITE_EVENT_DATE`, `VITE_KICKER`. Override the product name with `VITE_PRODUCT_NAME` if needed. Preview environments can point at the production token API with `VITE_PRODUCTION_ORIGIN`.
+Host tokens (`POST /api/live` with `role: "host"`) require a verified Better Auth session — the same cookie or `Authorization: Bearer` used after register/login. A password in the JSON body is not enough. Guests still get viewer tokens with no account.
+
+The old client-visible default (`vow` / `VITE_HOST_PASSWORD`) is removed. Do not set `VITE_HOST_PASSWORD`; it is no longer read.
+
+Optional leftover: `HOST_PASSWORD` is server-only, has **no shipped default**, and is **not** a way to go live without signing in. If you set it on Vercel from an earlier deploy, you can delete it. It is ignored for token minting so it cannot bypass sign-in and cannot lock out a signed-in host.
+
+Optional labels: `VITE_EVENT_NAME`, `VITE_EVENT_DATE`, `VITE_KICKER`. Override the product name with `VITE_PRODUCT_NAME` if needed. Preview environments can point at the production token API with `VITE_PRODUCTION_ORIGIN` for **guest** watch tokens only. Host publish must be minted on the deployment that has LiveKit keys **and** a signed-in session.
 
 ### Cost / ops (brief)
 

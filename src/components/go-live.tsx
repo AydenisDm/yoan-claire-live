@@ -9,7 +9,6 @@ import {
   copyWatchLink,
   openCamera,
   StreamerBroadcast,
-  hostPasswordFromSession,
   toggleTorch,
   type ChatLine,
   type LiveStats,
@@ -160,13 +159,11 @@ export function GoLive() {
     setBusy(true);
     setError(null);
     try {
-      const password = hostPasswordFromSession();
       const stream = await openCamera(facing);
       attach(stream);
       const session = new StreamerBroadcast(
         stream,
         setStats,
-        password,
         (line) => setChats((prev) => [...prev.slice(-7), line]),
       );
       const recorder = new LiveRecorder();

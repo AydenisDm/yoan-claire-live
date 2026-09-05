@@ -1,6 +1,5 @@
 export const HOST_IDENTITY = "streamer";
 export const HOST_GATE_KEY = "eventview-host-ok";
-export const HOST_PW_KEY = "eventview-host-pw";
 export const GUEST_ID_KEY = "eventview-guest-id";
 export const MAX_VIEWERS = 220;
 export const LIVE_PROXY_HEADER = "x-eventview-proxy";
@@ -23,14 +22,36 @@ export function liveRoomName(roomId: string) {
   return `eventview-${slug || "live"}`;
 }
 
-/** Host may publish when signed in, or when the optional server password matches. */
-export function hostMayGoLive(
-  signedIn: boolean,
-  password: string | undefined,
-  expectedPassword: string,
+/**
+ * Host LiveKit tokens require a verified Better Auth session.
+ * A client-supplied password is never enough — including the old default "vow".
+ */
+export function hostMayGoLive(signedIn: boolean) {
+  return signedIn;
+}
+
+/**
+ * Server-only `HOST_PASSWORD` has no shipped default and is not read from
+ * `VITE_*`. It does not grant host tokens by itself; see `authorizeHostToken`.
+ */
+export function resolveHostPassword(
+  env: Record<string, string | undefined> = process.env,
 ) {
-  if (signedIn) return true;
-  return Boolean(expectedPassword) && password === expectedPassword;
+  return env.HOST_PASSWORD?.trim() ?? "";
+}
+
+/**
+ * Authorize a host token mint.
+ * Signed-in session is required. Password is ignored so a leftover
+ * `HOST_PASSWORD` env var cannot lock out a real host, and `vow` cannot
+ * mint a token without a session.
+ */
+export function authorizeHostToken(input: {
+  signedIn: boolean;
+  password?: string;
+  expectedPassword?: string;
+}) {
+  return hostMayGoLive(input.signedIn);
 }
 
 export function guestIdentity() {
