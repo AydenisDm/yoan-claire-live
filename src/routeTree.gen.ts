@@ -17,6 +17,7 @@ import { Route as HostRouteImport } from './routes/host'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as WatchRouteImport } from './routes/watch'
+import { Route as AndroidAuthRouteImport } from './routes/android-auth'
 import { Route as ApiLiveRouteImport } from './routes/api/live'
 import { Route as ApiRtcRouteImport } from './routes/api/rtc'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -61,6 +62,11 @@ const WatchRoute = WatchRouteImport.update({
   path: '/watch',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AndroidAuthRoute = AndroidAuthRouteImport.update({
+  id: '/android-auth',
+  path: '/android-auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiLiveRoute = ApiLiveRouteImport.update({
   id: '/api/live',
   path: '/api/live',
@@ -86,6 +92,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/watch': typeof WatchRoute
+  '/android-auth': typeof AndroidAuthRoute
   '/api/live': typeof ApiLiveRoute
   '/api/rtc': typeof ApiRtcRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -99,6 +106,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/watch': typeof WatchRoute
+  '/android-auth': typeof AndroidAuthRoute
   '/api/live': typeof ApiLiveRoute
   '/api/rtc': typeof ApiRtcRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -113,6 +121,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/watch': typeof WatchRoute
+  '/android-auth': typeof AndroidAuthRoute
   '/api/live': typeof ApiLiveRoute
   '/api/rtc': typeof ApiRtcRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -128,6 +137,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/watch'
+    | '/android-auth'
     | '/api/live'
     | '/api/rtc'
     | '/api/auth/$'
@@ -141,6 +151,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/watch'
+    | '/android-auth'
     | '/api/live'
     | '/api/rtc'
     | '/api/auth/$'
@@ -154,6 +165,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/watch'
+    | '/android-auth'
     | '/api/live'
     | '/api/rtc'
     | '/api/auth/$'
@@ -168,6 +180,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
   WatchRoute: typeof WatchRoute
+  AndroidAuthRoute: typeof AndroidAuthRoute
   ApiLiveRoute: typeof ApiLiveRoute
   ApiRtcRoute: typeof ApiRtcRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -231,6 +244,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WatchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/android-auth': {
+      id: '/android-auth'
+      path: '/android-auth'
+      fullPath: '/android-auth'
+      preLoaderRoute: typeof AndroidAuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/live': {
       id: '/api/live'
       path: '/api/live'
@@ -264,6 +284,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
   WatchRoute: WatchRoute,
+  AndroidAuthRoute: AndroidAuthRoute,
   ApiLiveRoute: ApiLiveRoute,
   ApiRtcRoute: ApiRtcRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
