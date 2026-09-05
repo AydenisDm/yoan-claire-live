@@ -2,6 +2,10 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   authorizeHostToken,
+  guestSharePayload,
+  guestShareText,
+  guestShareTitle,
+  guestWatchUrl,
   hostMayGoLive,
   liveRoomName,
   resolveHostPassword,
@@ -59,5 +63,20 @@ describe("host token authorization", () => {
       authorizeHostToken({ signedIn: true, password: "wrong", expectedPassword: "break-glass" }),
       true,
     );
+  });
+});
+
+describe("guest share copy", () => {
+  it("keeps the production Vercel host and brands the message as EventView", () => {
+    const payload = guestSharePayload();
+    assert.equal(payload.url, "https://yoan-claire-live.vercel.app/");
+    assert.equal(guestWatchUrl(), payload.url);
+    assert.equal(payload.title, "Watch live on EventView");
+    assert.equal(guestShareTitle(), payload.title);
+    assert.equal(payload.text, "Watch live on EventView\nhttps://yoan-claire-live.vercel.app/");
+    assert.equal(guestShareText(), payload.text);
+    assert.match(payload.text, /EventView/);
+    assert.doesNotMatch(payload.title, /Eventstream|Yoan|Claire|livestream/i);
+    assert.ok(payload.text.startsWith("Watch live on EventView\n"));
   });
 });

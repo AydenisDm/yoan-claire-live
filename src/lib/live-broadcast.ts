@@ -1,11 +1,12 @@
 import { AudioPresets, ConnectionState, Room, RoomEvent, Track, VideoPresets, VideoQuality, type LocalTrackPublication, type RemoteParticipant, type RemoteTrack, type RemoteTrackPublication } from "livekit-client";
 import { chatLabel, isChatId, type ChatLine } from "@/lib/crowd";
-import { guestSharePayload } from "@/lib/guest-share";
+import { eventConfig } from "@/lib/event-config";
 import {
   HOST_IDENTITY,
   PRODUCTION_LIVE_API,
   PRODUCTION_ORIGIN,
   guestIdentity,
+  guestSharePayload,
 } from "@/lib/live-config";
 
 export type LiveStats = {
@@ -172,7 +173,7 @@ export async function toggleTorch(stream: MediaStream, on: boolean) {
 }
 
 export async function copyWatchLink() {
-  const { title, text, url } = guestSharePayload();
+  const { title, text, url } = guestSharePayload(eventConfig.productName);
   try {
     await navigator.clipboard.writeText(text);
     return "copied" as const;
@@ -189,7 +190,7 @@ export async function copyWatchLink() {
 }
 
 export async function shareWatchLink() {
-  const { title, text, url } = guestSharePayload();
+  const { title, text, url } = guestSharePayload(eventConfig.productName);
   if (typeof navigator.share === "function") {
     try {
       await navigator.share({ title, text, url });

@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { RedirectToSignIn, UserButton } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { eventConfig } from "@/lib/event-config";
-import { guestSharePayload } from "@/lib/guest-share";
 import { copyWatchLink, shareWatchLink } from "@/lib/live-broadcast";
+import { guestSharePayload } from "@/lib/live-config";
 import { useLiveSetup } from "@/lib/live-setup";
 import { cn } from "@/lib/utils";
 
@@ -32,7 +32,7 @@ function HostConsole() {
   const [shared, setShared] = useState(false);
   const [copyError, setCopyError] = useState(false);
   const { status: liveSetup, loading: liveLoading } = useLiveSetup();
-  const share = guestSharePayload();
+  const share = guestSharePayload(eventConfig.productName);
   const [canNativeShare, setCanNativeShare] = useState(false);
 
   useEffect(() => {
