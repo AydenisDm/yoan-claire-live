@@ -18,7 +18,7 @@ export function TabBar({ active }: { active: "watch" | "live" | "archive" | "hub
             key={key}
             to={to}
             className={cn(
-              "flex min-h-12 min-w-14 flex-col items-center justify-center gap-0.5 px-2 text-xs font-medium",
+              "flex min-h-12 min-w-14 flex-col items-center justify-center gap-0.5 px-2 text-xs font-medium transition-colors duration-quick ease-snappy active:scale-[0.96]",
               active === key ? "text-fg" : "text-subtle",
             )}
           >

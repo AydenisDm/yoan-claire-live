@@ -68,7 +68,7 @@ function PlayerShell({
         >
           {status === "live" ? (
             <>
-              <span className="size-1.5 rounded-full bg-live" />
+              <span className="live-dot size-1.5 rounded-full bg-live" />
               Live
             </>
           ) : status === "reconnecting" ? (
@@ -83,7 +83,7 @@ function PlayerShell({
         </Badge>
       </div>
       {status === "live" && muted && onUnmute ? (
-        <div className="absolute inset-0 z-20 flex items-end justify-center bg-bg/55 p-4 pb-6">
+        <div className="ev-chrome absolute inset-0 z-20 flex items-end justify-center bg-bg/55 p-4 pb-6">
           <Button
             type="button"
             size="lg"

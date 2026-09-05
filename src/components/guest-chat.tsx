@@ -45,7 +45,7 @@ export function GuestChat({
             disabled={disabled || cool}
             onClick={() => send(opt.id)}
             className={cn(
-              "min-h-11 rounded-full border px-4 text-sm disabled:cursor-not-allowed disabled:opacity-50",
+              "min-h-11 rounded-full border px-4 text-sm transition-[background-color,color,border-color,transform] duration-quick ease-snappy active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-50",
               mine === opt.id
                 ? "border-accent bg-accent text-accent-fg"
                 : "border-border bg-raised text-fg",

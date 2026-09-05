@@ -132,7 +132,7 @@ export function ArchiveView() {
       ) : null}
 
       {rows === null ? (
-        <div className="h-24 animate-pulse rounded-xl bg-raised" />
+        <div className="ev-skeleton h-24 rounded-xl bg-raised" />
       ) : rows.length === 0 ? (
         <section className="rounded-xl border border-border bg-surface px-5 py-10 text-center">
           <p className="font-serif text-2xl text-fg">No clips yet</p>
@@ -149,7 +149,7 @@ export function ArchiveView() {
             >
               <button
                 type="button"
-                className="min-w-0 flex-1 text-left"
+                className="min-w-0 flex-1 text-left transition-opacity duration-quick ease-snappy active:opacity-80"
                 onClick={() => void play(row.id)}
               >
                 <p className="truncate font-medium text-fg">{row.title}</p>
