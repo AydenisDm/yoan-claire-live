@@ -49,7 +49,7 @@ object Crowd {
         ),
         FeedbackGroup(
             kind = "moment",
-            title = "The stream",
+            title = "The event",
             options = listOf(
                 FeedbackOption("great", "Great"),
                 FeedbackOption("moving", "Moving"),

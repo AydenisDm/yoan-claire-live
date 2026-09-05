@@ -63,10 +63,15 @@ If you deny camera/mic, Go live shows a clear error. Allow both in Settings → 
 ## First launch
 
 1. **Watch** — no account. Leave it open; the picture appears when a host is live. Tap for sound.
-2. **Live** — create a camera account or sign in (same email/password as the website). Share the guest link, then Go live.
+2. **Live** — create a camera account or sign in (same email/password as the website). Share the EventView invite, then Go live.
 3. Prefer a charged phone and a hotspot over packed venue Wi‑Fi. Disable auto-lock while filming.
 
-Guest watch link this build shares: `https://yoan-claire-live.vercel.app/`
+Guest invite this build shares:
+
+```
+Watch live on EventView
+https://yoan-claire-live.vercel.app/
+```
 
 ## Uninstall
 

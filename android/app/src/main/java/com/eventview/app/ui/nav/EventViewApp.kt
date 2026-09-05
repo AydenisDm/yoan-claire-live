@@ -61,6 +61,7 @@ import com.eventview.app.ui.theme.EventViewTheme
 import com.eventview.app.util.rememberEventViewWindow
 import com.eventview.core.AuthSetupStatus
 import com.eventview.core.Crowd
+import com.eventview.core.LiveConfig
 import com.eventview.core.LiveSetupStatus
 import com.eventview.core.cameraPermissionMessage
 import kotlinx.coroutines.CoroutineScope
@@ -138,12 +139,16 @@ fun EventViewApp(
         }
 
         fun shareWatch() {
+            val invite = LiveConfig.guestShareText(
+                productName = BuildConfig.PRODUCT_NAME,
+                origin = BuildConfig.WATCH_URL,
+            )
             val intent = Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"
-                putExtra(Intent.EXTRA_SUBJECT, "Watch on ${BuildConfig.PRODUCT_NAME}")
-                putExtra(Intent.EXTRA_TEXT, BuildConfig.WATCH_URL)
+                putExtra(Intent.EXTRA_SUBJECT, LiveConfig.guestShareTitle(BuildConfig.PRODUCT_NAME))
+                putExtra(Intent.EXTRA_TEXT, invite)
             }
-            context.startActivity(Intent.createChooser(intent, "Share guest link"))
+            context.startActivity(Intent.createChooser(intent, "Share EventView invite"))
         }
 
         fun go(route: String) {

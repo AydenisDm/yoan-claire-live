@@ -41,6 +41,7 @@ import com.eventview.app.ui.theme.EvFg
 import com.eventview.app.ui.theme.LocalEvColors
 import com.eventview.app.util.EventViewWindow
 import com.eventview.core.AuthSession
+import com.eventview.core.LiveConfig
 import com.eventview.core.LiveSetupStatus
 import com.eventview.core.ViewerStatus
 
@@ -99,18 +100,21 @@ fun HostScreen(
 
         EvCard {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Guest watch link", style = MaterialTheme.typography.titleLarge, color = EvFg)
+                Text("EventView guest link", style = MaterialTheme.typography.titleLarge, color = EvFg)
                 Text(
-                    "Send this. Guests never sign in. Stopping a live saves a session to Archive on this phone.",
+                    "Copy or share this EventView invite. Guests never sign in. Stopping a live saves a session to Archive on this phone.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = LocalEvColors.current.muted,
                 )
                 Text(
-                    BuildConfig.WATCH_URL,
+                    LiveConfig.guestShareText(
+                        productName = BuildConfig.PRODUCT_NAME,
+                        origin = BuildConfig.WATCH_URL,
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = EvFg,
                 )
-                EvPrimaryButton("Share guest link", onClick = onShare)
+                EvPrimaryButton("Share EventView invite", onClick = onShare)
             }
         }
 
