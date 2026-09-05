@@ -15,8 +15,8 @@ describe("describeAuthError", () => {
 
   it("keeps social setup copy and maps a cancelled OAuth", () => {
     assert.match(
-      describeAuthError(new Error("Apple Sign-In is not set up on this site yet. Add APPLE_CLIENT_ID."), "x"),
-      /APPLE_CLIENT_ID/,
+      describeAuthError(new Error("Google sign-in is not set up on this site yet. Add GOOGLE_CLIENT_SECRET."), "x"),
+      /GOOGLE_CLIENT_SECRET/,
     );
     assert.match(describeAuthError(new Error("access_denied"), "x"), /cancelled/i);
   });

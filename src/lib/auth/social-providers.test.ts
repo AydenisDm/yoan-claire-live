@@ -10,6 +10,7 @@ import {
   productionCallbackUrls,
   resolveSocialMethods,
   socialCallbackUrl,
+  HOST_SOCIAL_PROVIDERS,
   socialNotConfiguredMessage,
 } from "./social-providers.ts";
 import {
@@ -139,11 +140,22 @@ describe("callback URLs", () => {
   });
 });
 
+describe("host-visible social", () => {
+  it("offers Google only — Apple and X stay off the host screens", () => {
+    assert.deepEqual(
+      HOST_SOCIAL_PROVIDERS.map((p) => p.id),
+      ["google"],
+    );
+  });
+});
+
 describe("setup copy", () => {
-  it("names the Vercel vars instead of inventing credentials", () => {
-    assert.match(socialNotConfiguredMessage("apple"), /APPLE_CLIENT_ID/);
+  it("names Google env vars and does not push Apple/X setup", () => {
     assert.match(socialNotConfiguredMessage("google"), /GOOGLE_CLIENT_SECRET/);
-    assert.match(socialNotConfiguredMessage("twitter"), /TWITTER_CLIENT_ID/);
+    assert.match(socialNotConfiguredMessage("apple"), /Google or email/);
+    assert.match(socialNotConfiguredMessage("twitter"), /Google or email/);
+    assert.doesNotMatch(socialNotConfiguredMessage("apple"), /APPLE_CLIENT_ID/);
+    assert.doesNotMatch(socialNotConfiguredMessage("twitter"), /TWITTER_CLIENT_ID/);
   });
 });
 

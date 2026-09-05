@@ -88,7 +88,7 @@ function Register() {
   return (
     <AccountScreen
       title="Create camera account"
-      subtitle="Continue with Apple, Google, or X — or register with email. Guests watch without signing in."
+      subtitle="Continue with Google or register with email. Guests watch without signing in."
     >
       {!authEnabled ? (
         <p className="mt-8 text-center text-sm text-muted">Registration is disabled.</p>

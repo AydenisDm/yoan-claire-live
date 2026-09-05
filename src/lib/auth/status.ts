@@ -17,9 +17,9 @@ export type AuthSetupStatus = {
   emailPassword: boolean;
   /** True when at least one social method can complete on this host. */
   social: boolean;
-  /** Which backend each EventView social button should use (null = not set up). */
+  /** Which backend each social id can use (null = not set up). Host UI only offers Google. */
   socialMethods: SocialMethods;
-  /** Convenience flags for Android / older clients. */
+  /** Convenience flags for Android / older clients. Apple/X stay false unless env is set. */
   providers: {
     apple: boolean;
     google: boolean;

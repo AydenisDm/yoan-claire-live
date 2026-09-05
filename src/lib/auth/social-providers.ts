@@ -1,5 +1,8 @@
 /**
- * Official Better Auth social providers for EventView (Apple, Google, X).
+ * Official Better Auth social providers for EventView.
+ *
+ * Hosts see Google + email/password only. Apple and X stay in the status
+ * contract and can stay dormant behind env flags — they are not offered in UI.
  *
  * Dependency-free so the client, status probe, and tests can share one contract
  * without pulling `pg` / jose / Better Auth into the browser bundle.
@@ -28,6 +31,9 @@ export const SOCIAL_PROVIDERS: readonly {
   { id: "google", label: "Google", brokerId: "grok-google" },
   { id: "twitter", label: "X", brokerId: "grok-x" },
 ] as const;
+
+/** Providers hosts see on /login and /register. */
+export const HOST_SOCIAL_PROVIDERS = SOCIAL_PROVIDERS.filter((p) => p.id === "google");
 
 /** Better Auth callback path for each official social provider. */
 export const SOCIAL_CALLBACK_PATHS: Record<SocialId, string> = {
@@ -96,8 +102,8 @@ export function grokBrokerAvailable(source: EnvMap = process.env, host = ""): bo
  * Which backend to use for each button.
  *
  * Sandbox prefers the Grok broker for Google/X (those callbacks are already
- * registered). Vercel prefers official Apple / Google / X apps. Apple has no
- * broker path.
+ * registered). Vercel prefers official apps when credentials exist. Apple has
+ * no broker path. Host UI only offers Google.
  */
 export function resolveSocialMethods(source: EnvMap = process.env, host = ""): SocialMethods {
   const official = officialSocialFlags(source);
@@ -115,13 +121,10 @@ export function anySocialAvailable(methods: SocialMethods): boolean {
 }
 
 export function socialNotConfiguredMessage(id: SocialId): string {
-  if (id === "apple") {
-    return "Apple Sign-In is not set up on this site yet. Add APPLE_CLIENT_ID, APPLE_TEAM_ID, APPLE_KEY_ID, and APPLE_PRIVATE_KEY on Vercel (Production and Preview), then redeploy.";
-  }
   if (id === "google") {
     return "Google sign-in is not set up on this site yet. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET on Vercel (Production and Preview), then redeploy.";
   }
-  return "X sign-in is not set up on this site yet. Add TWITTER_CLIENT_ID and TWITTER_CLIENT_SECRET (or X_CLIENT_ID / X_CLIENT_SECRET) on Vercel (Production and Preview), then redeploy.";
+  return "Use Google or email to sign in.";
 }
 
 export function brokerIdFor(id: SocialId): string | null {
