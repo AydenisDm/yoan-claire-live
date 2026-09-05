@@ -3,7 +3,6 @@ import { chatLabel, isChatId, type ChatLine } from "@/lib/crowd";
 import { eventConfig } from "@/lib/event-config";
 import {
   HOST_IDENTITY,
-  HOST_PW_KEY,
   PRODUCTION_LIVE_API,
   PRODUCTION_ORIGIN,
   guestIdentity,
@@ -47,9 +46,8 @@ function isHostParticipant(participant: {
   return participant.identity === HOST_IDENTITY || Boolean(participant.permissions?.canPublish);
 }
 
-async function fetchLiveToken(role: "host" | "guest", password?: string): Promise<TokenResponse> {
-  const payload =
-    role === "guest" ? { role, identity: guestIdentity() } : { role, password };
+async function fetchLiveToken(role: "host" | "guest"): Promise<TokenResponse> {
+  const payload = role === "guest" ? { role, identity: guestIdentity() } : { role };
   const endpoints = ["/api/live"];
   if (typeof window !== "undefined" && window.location.origin !== PRODUCTION_ORIGIN) {
     endpoints.push(PRODUCTION_LIVE_API);
@@ -200,18 +198,15 @@ export class StreamerBroadcast {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private backoffMs = 1500;
   private readonly reports = new Map<string, "ok" | "bad">();
-  private readonly password: string;
 
   constructor(
     stream: MediaStream,
     onStats: (stats: LiveStats) => void,
-    password: string,
     onChat: (line: ChatLine) => void = () => undefined,
   ) {
     this.stream = stream;
     this.onStats = onStats;
     this.onChat = onChat;
-    this.password = password;
   }
 
   setOnViewers(fn: (stats: LiveStats) => void) {
@@ -237,7 +232,7 @@ export class StreamerBroadcast {
       // ignore
     }
     try {
-      const creds = await fetchLiveToken("host", this.password);
+      const creds = await fetchLiveToken("host");
       if (this.closed) return;
 
       const room = new Room({
@@ -612,11 +607,3 @@ export class ViewerSession {
   }
 }
 
-export function hostPasswordFromSession() {
-  if (typeof sessionStorage === "undefined") return "";
-  return sessionStorage.getItem(HOST_PW_KEY) ?? "";
-}
-
-export function rememberHostPassword(password: string) {
-  sessionStorage.setItem(HOST_PW_KEY, password);
-}

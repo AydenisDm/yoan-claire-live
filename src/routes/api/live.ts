@@ -7,12 +7,13 @@ import {
   LIVE_PROXY_HEADER,
   MAX_VIEWERS,
   PRODUCTION_LIVE_API,
-  hostMayGoLive,
+  authorizeHostToken,
   liveRoomName,
 } from "@/lib/live-config";
 
 const postSchema = z.object({
   role: z.enum(["host", "guest"]),
+  // Accepted so older clients do not 400. Never grants host privileges.
   password: z.string().max(128).optional(),
   check: z.boolean().optional(),
   identity: z.string().max(64).optional(),
@@ -50,10 +51,6 @@ function livekitEnv() {
   const apiKey = envVal("LIVEKIT_API_KEY");
   const apiSecret = envVal("LIVEKIT_API_SECRET");
   return { url, apiKey, apiSecret, ok: Boolean(url && apiKey && apiSecret) };
-}
-
-function hostPassword() {
-  return envVal("HOST_PASSWORD") || eventConfig.hostPassword;
 }
 
 function httpUrl(wsUrl: string) {
@@ -121,9 +118,11 @@ async function handlePost(request: Request) {
   if (!parsed.success) return json(request, { error: "invalid" }, 400);
 
   const { role, password, identity: guestId, check } = parsed.data;
-  const signedIn = role === "host" ? await hostSignedIn(request) : false;
-  if (role === "host" && !hostMayGoLive(signedIn, password, hostPassword())) {
-    return json(request, { error: "unauthorized" }, 401);
+  if (role === "host") {
+    const signedIn = await hostSignedIn(request);
+    if (!authorizeHostToken({ signedIn, password })) {
+      return json(request, { error: "unauthorized" }, 401);
+    }
   }
   if (check) {
     if (env.ok) return json(request, { ok: true, configured: true, room: roomName() });
@@ -135,13 +134,14 @@ async function handlePost(request: Request) {
     return json(request, { ok: true, configured: false, room: roomName() });
   }
   if (!env.ok) {
-    const payload =
-      role === "host" && signedIn
-        ? { ...parsed.data, password: password || hostPassword() }
-        : parsed.data;
+    // Host tokens must be minted on this origin after a local session check.
+    // Do not proxy a password to production — that was the previous bypass.
+    if (role === "host") {
+      return json(request, { error: "not_configured", configured: false }, 503);
+    }
     const proxied = await proxyProduction({
       method: "POST",
-      body: JSON.stringify(payload),
+      body: JSON.stringify(parsed.data),
     });
     if (proxied) return proxied;
     return json(request, { error: "not_configured", configured: false }, 503);
