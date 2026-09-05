@@ -190,8 +190,10 @@ describe("buildOfficialSocialProviders", () => {
       GOOGLE_CLIENT_ID: "gid",
       GOOGLE_CLIENT_SECRET: "gsecret",
     });
-    assert.equal(built.google?.clientId, "gid");
-    assert.equal(built.google?.prompt, "select_account");
+    const google = built.google;
+    assert.ok(google && typeof google === "object");
+    assert.equal(google.clientId, "gid");
+    assert.equal(google.prompt, "select_account");
     assert.deepEqual(officialTrustedProviderIds({
       GOOGLE_CLIENT_ID: "gid",
       GOOGLE_CLIENT_SECRET: "gsecret",

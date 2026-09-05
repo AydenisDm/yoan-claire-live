@@ -5,13 +5,16 @@
  * Team ID + Key ID + .p8 private key, matching Better Auth 1.6's documented
  * pattern. Accepts a pre-made `APPLE_CLIENT_SECRET` JWT as an alternative.
  */
+import type { BetterAuthOptions } from "better-auth";
 import { importPKCS8, SignJWT } from "jose";
 import {
   officialSocialFlags,
   readEnv,
   type EnvMap,
   type SocialId,
-} from "./social-providers";
+} from "./social-providers.ts";
+
+type OfficialSocialProviders = NonNullable<BetterAuthOptions["socialProviders"]>;
 
 /** Apple rejects JWTs that expire more than ~6 months out. 180 days is safe. */
 const APPLE_JWT_LIFETIME_SEC = 180 * 24 * 60 * 60;
@@ -55,20 +58,6 @@ async function resolveAppleClientSecret(source: EnvMap): Promise<string> {
   return generateAppleClientSecret({ clientId, teamId, keyId, privateKey });
 }
 
-type SocialProviderConfig = {
-  clientId: string | string[];
-  clientSecret: string;
-  prompt?: string;
-  scope?: string[];
-  appBundleIdentifier?: string;
-};
-
-type OfficialSocialProviders = {
-  apple?: () => Promise<SocialProviderConfig>;
-  google?: SocialProviderConfig;
-  twitter?: SocialProviderConfig;
-};
-
 /**
  * Only providers with both id + secret are included. Empty object is valid —
  * email/password still works, and the UI explains a missing social method.
@@ -88,7 +77,7 @@ export function buildOfficialSocialProviders(source: EnvMap = process.env): Offi
       providers.google = {
         clientId: extras.length ? [clientId, ...extras] : clientId,
         clientSecret,
-        prompt: "select_account",
+        prompt: "select_account" as const,
       };
     }
   }
