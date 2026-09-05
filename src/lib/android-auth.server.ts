@@ -12,6 +12,8 @@ import {
   androidAuthDonePath,
   androidAuthErrorPath,
   androidOAuthCallback,
+  androidOAuthIntent,
+  androidPackageFor,
   sanitizeAndroidScheme,
   type AndroidAuthScheme,
 } from "./android-auth";
@@ -64,29 +66,42 @@ function html(body: string, status = 200): Response {
   );
 }
 
-function returnToApp(scheme: AndroidAuthScheme, token: string): Response {
-  const dest = androidOAuthCallback(scheme, token);
-  const safe = dest.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+function returnToApp(scheme: AndroidAuthScheme, token: string, pkg: string): Response {
+  const custom = androidOAuthCallback(scheme, token);
+  const intent = androidOAuthIntent(scheme, token, pkg);
+  const safeIntent = intent.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+  const safeCustom = custom.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
   return new Response(
     `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta http-equiv="refresh" content="0;url=${safe}" />
+<meta http-equiv="refresh" content="0;url=${safeIntent}" />
 <title>Returning to EventView</title>
 <style>
   html,body{margin:0;min-height:100%;background:#0e0f12;color:#9aa0ab;
     font:15px/1.5 Figtree,system-ui,sans-serif}
   main{min-height:100vh;display:grid;place-items:center;padding:1.5rem;text-align:center}
+  a{color:#eef0f4}
 </style>
 </head>
 <body>
 <main>
   <p>Returning to EventView…</p>
-  <p><a href="${safe}" style="color:#eef0f4">Open the app</a></p>
+  <p><a href="${safeIntent}">Open the app</a></p>
+  <p><a href="${safeCustom}">Open with EventView link</a></p>
 </main>
-<script>location.replace(${JSON.stringify(dest)});</script>
+<script>
+  (function () {
+    var intent = ${JSON.stringify(intent)};
+    var custom = ${JSON.stringify(custom)};
+    try { location.replace(intent); } catch (e) {}
+    setTimeout(function () {
+      try { location.replace(custom); } catch (e) {}
+    }, 350);
+  })();
+</script>
 </body>
 </html>`,
     {
@@ -129,6 +144,7 @@ async function startGoogle(
 export async function handleAndroidAuthRequest(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const scheme = sanitizeAndroidScheme(url.searchParams.get("scheme"));
+  const pkg = androidPackageFor(scheme, url.searchParams.get("pkg"));
   const errored = url.searchParams.has("error");
   const done = url.searchParams.get("done") === "1";
 
@@ -140,11 +156,11 @@ export async function handleAndroidAuthRequest(request: Request): Promise<Respon
 
   if (done) {
     const fromCookie = readCookie(request, SESSION_TOKEN_COOKIE);
-    if (fromCookie) return returnToApp(scheme, fromCookie);
+    if (fromCookie) return returnToApp(scheme, fromCookie, pkg);
     try {
       const session = await auth.api.getSession({ headers: request.headers });
       const token = session?.session?.token;
-      if (token) return returnToApp(scheme, token);
+      if (token) return returnToApp(scheme, token, pkg);
     } catch {
       // fall through
     }
@@ -153,8 +169,8 @@ export async function handleAndroidAuthRequest(request: Request): Promise<Respon
     );
   }
 
-  const callbackURL = androidAuthDonePath(scheme);
-  const errorCallbackURL = androidAuthErrorPath(scheme);
+  const callbackURL = androidAuthDonePath(scheme, pkg);
+  const errorCallbackURL = androidAuthErrorPath(scheme, pkg);
   try {
     const apiRes = await startGoogle(request, callbackURL, errorCallbackURL);
     if (!apiRes.ok) {
