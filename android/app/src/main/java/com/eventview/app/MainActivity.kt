@@ -1,6 +1,7 @@
 package com.eventview.app
 
 import android.app.PictureInPictureParams
+import android.content.Intent
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
@@ -14,6 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.view.WindowCompat
+import com.eventview.app.data.auth.GoogleSignIn
 import com.eventview.app.ui.nav.EventViewApp
 
 class MainActivity : ComponentActivity() {
@@ -27,6 +29,7 @@ class MainActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         inPip = isInPictureInPictureMode
         val container = (application as EventViewApplication).container
+        handleAuthIntent(intent)
         setContent {
             val width = calculateWindowSizeClass(this).widthSizeClass
             EventViewApp(
@@ -36,6 +39,17 @@ class MainActivity : ComponentActivity() {
                 onPipEligible = { pipEligible = it },
             )
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleAuthIntent(intent)
+    }
+
+    private fun handleAuthIntent(intent: Intent?) {
+        val token = GoogleSignIn.tokenFrom(intent) ?: return
+        (application as EventViewApplication).container.offerGoogleToken(token)
     }
 
     override fun onUserLeaveHint() {

@@ -2,9 +2,12 @@ package com.eventview.app.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -27,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import com.eventview.app.ui.components.ErrorBanner
 import com.eventview.app.ui.components.EvField
 import com.eventview.app.ui.components.EvPrimaryButton
+import com.eventview.app.ui.components.EvSecondaryButton
 import com.eventview.app.ui.components.EvTextButton
 import com.eventview.app.ui.components.Kicker
 import com.eventview.app.ui.theme.EvBg
@@ -42,6 +46,7 @@ fun SignInScreen(
     busy: Boolean,
     error: String?,
     onSubmit: (email: String, password: String) -> Unit,
+    onGoogle: (() -> Unit)? = null,
     onRegister: () -> Unit,
     onForgot: () -> Unit,
     onWatch: () -> Unit,
@@ -86,6 +91,15 @@ fun SignInScreen(
         EvTextButton("Forgot password?", onClick = onForgot, modifier = Modifier.align(Alignment.End))
         ErrorBanner(error)
         EvPrimaryButton(if (busy) "Signing in…" else "Sign in", onClick = ::submit, enabled = !busy)
+        if (onGoogle != null && showGoogle(setup)) {
+            AuthOrDivider()
+            EvSecondaryButton(
+                if (busy) "Opening Google…" else "Continue with Google",
+                onClick = onGoogle,
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
         EvTextButton("Create a camera account", onClick = onRegister)
         EvTextButton("Watch without an account", onClick = onWatch)
     }
@@ -97,6 +111,7 @@ fun RegisterScreen(
     busy: Boolean,
     error: String?,
     onSubmit: (name: String, email: String, password: String) -> Unit,
+    onGoogle: (() -> Unit)? = null,
     onSignIn: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -120,10 +135,20 @@ fun RegisterScreen(
 
     AuthShell(
         title = "Create camera account",
-        subtitle = "Register to go live. Guests watch without signing in.",
+        subtitle = "Continue with Google or register with email. Guests watch without signing in.",
         setup = setup,
         modifier = modifier,
     ) {
+        if (onGoogle != null && showGoogle(setup)) {
+            EvSecondaryButton(
+                if (busy) "Opening Google…" else "Continue with Google",
+                onClick = onGoogle,
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            ErrorBanner(error)
+            AuthOrDivider("or email")
+        }
         EvField(
             value = name,
             onValueChange = { name = it },
@@ -156,7 +181,9 @@ fun RegisterScreen(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { submit() }),
         )
-        ErrorBanner(error)
+        if (onGoogle == null || !showGoogle(setup)) {
+            ErrorBanner(error)
+        }
         EvPrimaryButton(
             if (busy) "Creating account…" else "Create camera account",
             onClick = ::submit,
@@ -181,6 +208,38 @@ fun ForgotScreen(onSignIn: () -> Unit, onRegister: () -> Unit, modifier: Modifie
         )
         EvPrimaryButton("Back to host sign in", onClick = onSignIn)
         EvTextButton("Create a new camera account", onClick = onRegister)
+    }
+}
+
+@Composable
+private fun showGoogle(setup: AuthSetupStatus?): Boolean {
+    return setup == null || (setup.ok && setup.social)
+}
+
+@Composable
+private fun AuthOrDivider(label: String = "or") {
+    Row(
+        Modifier.fillMaxWidth().padding(top = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Box(
+            Modifier
+                .weight(1f)
+                .height(1.dp)
+                .background(LocalEvColors.current.border),
+        )
+        Text(
+            label.uppercase(),
+            style = MaterialTheme.typography.labelSmall,
+            color = LocalEvColors.current.subtle,
+        )
+        Box(
+            Modifier
+                .weight(1f)
+                .height(1.dp)
+                .background(LocalEvColors.current.border),
+        )
     }
 }
 
