@@ -50,7 +50,7 @@ enum class ViewerStatus {
 }
 
 fun ViewerStatus.title(): String = when (this) {
-    ViewerStatus.WAITING -> "The stream will begin shortly"
+    ViewerStatus.WAITING -> "The live picture will begin shortly"
     ViewerStatus.LIVE -> "Live"
     ViewerStatus.RECONNECTING -> "Reconnecting"
     ViewerStatus.FULL -> "The room is full"
@@ -59,7 +59,7 @@ fun ViewerStatus.title(): String = when (this) {
 
 fun ViewerStatus.body(): String = when (this) {
     ViewerStatus.WAITING ->
-        "Leave this page open. When the event goes live, the picture appears here."
+        "Leave this page open. When the event goes live on EventView, the picture appears here."
     ViewerStatus.LIVE ->
         "When the picture appears, tap for sound. Send a ready-made note below."
     ViewerStatus.RECONNECTING ->
