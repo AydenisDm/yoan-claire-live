@@ -22,6 +22,7 @@ data class EventViewExtraColors(
     val live: Color,
     val liveFg: Color,
     val warn: Color,
+    val glow: Color,
 )
 
 val LocalEvColors = staticCompositionLocalOf {
@@ -35,6 +36,7 @@ val LocalEvColors = staticCompositionLocalOf {
         live = EvLive,
         liveFg = EvLiveFg,
         warn = EvWarn,
+        glow = EvGlow,
     )
 }
 
@@ -94,6 +96,7 @@ fun EventViewTheme(
             live = EvLive,
             liveFg = EvLiveFg,
             warn = EvWarn,
+            glow = EvGlow,
         )
     } else {
         EventViewExtraColors(
@@ -106,6 +109,7 @@ fun EventViewTheme(
             live = EvLive,
             liveFg = EvLiveFg,
             warn = Color(0xFFA66A1A),
+            glow = Color(0x2214130F),
         )
     }
     CompositionLocalProvider(

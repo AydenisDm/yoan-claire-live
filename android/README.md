@@ -15,6 +15,7 @@ No LiveKit API key lives in the app. Tokens are minted by the existing website, 
 | Account status | `GET /api/auth/status` | Host screens |
 | Register | `POST /api/auth/sign-up/email` | Host |
 | Sign in | `POST /api/auth/sign-in/email` | Host |
+| Google | Custom Tabs → `/android-auth` (production Better Auth Google) | Host |
 | Session | `GET /api/auth/get-session` | Host |
 | Sign out | `POST /api/auth/sign-out` | Host |
 
@@ -68,9 +69,9 @@ Point these at a preview deploy only if that deploy has LiveKit + Postgres confi
 
 **Host**
 
-1. Live tab → **Sign in** or **Create camera account** (email + password, 8+ characters).
-2. Same account as the website.
-3. **Share guest link** uses the Android share sheet (`https://yoan-claire-live.vercel.app/`).
+1. Live tab → **Continue with Google** or **Sign in** / **Create camera account** (email + password, 8+ characters).
+2. Same account as the website. Google uses Chrome Custom Tabs into the production Better Auth Google flow — no Apple or X.
+3. **Share EventView invite** uses the Android share sheet (`Watch live on EventView` plus `https://yoan-claire-live.vercel.app/`).
 4. **Go live** asks for camera + microphone. Allow both.
 5. Full-screen preview, Flip, Light (back camera), Share, Stop.
 6. A foreground notification keeps the camera up if the screen locks. Disable auto-lock and prefer a hotspot, same as the filming-phone notes on the website.
@@ -98,7 +99,16 @@ Point these at a preview deploy only if that deploy has LiveKit + Postgres confi
 |---|---|
 | LiveKit URL / API key / secret | Vercel project env only |
 | `DATABASE_URL`, `BETTER_AUTH_SECRET` | Vercel (accounts) |
-| None required in the APK | Default production API is public |
+| Google web client | Vercel `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — already live |
+| None required in the APK | Default production API is public. Custom Tabs reuse the web Google app. |
+
+### Google Sign-In on Android (no SHA-1)
+
+The debug APK opens Chrome Custom Tabs to `https://yoan-claire-live.vercel.app/android-auth?scheme=eventview-debug&pkg=com.eventview.app.debug`. That page starts the **existing web** Better Auth Google flow (`/api/auth/callback/google`) and, after Google returns, opens the app with a session token via Chrome `intent://` (preferred) or `eventview-debug://oauth?token=…`.
+
+You do **not** need an Android OAuth client or a debug keystore SHA-1 for this path. Those would only be required if we added the native Google SDK / Credential Manager.
+
+The `/android-auth` handoff must be on production. Email/password works without it.
 
 Do not commit `local.properties` or keystores.
 

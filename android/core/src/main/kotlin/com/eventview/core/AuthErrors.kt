@@ -26,6 +26,12 @@ object AuthErrors {
                 RegexOption.IGNORE_CASE,
             ).containsMatchIn(blob) ->
                 "Email or password did not match."
+            Regex("android-auth|handoff|not on this EventView site", RegexOption.IGNORE_CASE)
+                .containsMatchIn(blob) ->
+                "Google sign-in is not on this EventView site yet. Use email and password, or try again after the site updates."
+            Regex("google sign-in did not finish|oauth|state_not_found", RegexOption.IGNORE_CASE)
+                .containsMatchIn(blob) ->
+                "Google sign-in did not finish. Try again, or use email and password."
             Regex("failed to fetch|networkerror|load failed|unable to resolve", RegexOption.IGNORE_CASE)
                 .containsMatchIn(blob) ->
                 "Could not reach the account service. Check your connection and try again."

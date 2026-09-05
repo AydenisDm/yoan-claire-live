@@ -35,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -44,6 +45,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.eventview.app.AppContainer
 import com.eventview.app.BuildConfig
+import com.eventview.app.data.auth.GoogleSignIn
 import com.eventview.app.live.HostLiveService
 import com.eventview.app.ui.screens.ArchiveScreen
 import com.eventview.app.ui.screens.ForgotScreen
@@ -56,11 +58,15 @@ import com.eventview.app.ui.theme.EvAccent
 import com.eventview.app.ui.theme.EvAccentFg
 import com.eventview.app.ui.theme.EvBg
 import com.eventview.app.ui.theme.EvFg
+import com.eventview.app.ui.theme.EvMotion
+import com.eventview.app.ui.theme.EvSurface
 import com.eventview.app.ui.theme.EvSubtle
 import com.eventview.app.ui.theme.EventViewTheme
+import com.eventview.app.ui.theme.rememberReduceMotion
 import com.eventview.app.util.rememberEventViewWindow
 import com.eventview.core.AuthSetupStatus
 import com.eventview.core.Crowd
+import com.eventview.core.LiveConfig
 import com.eventview.core.LiveSetupStatus
 import com.eventview.core.cameraPermissionMessage
 import kotlinx.coroutines.CoroutineScope
@@ -107,6 +113,19 @@ fun EventViewApp(
             runCatching { liveSetup = container.tokens.setup() }
         }
 
+        LaunchedEffect(Unit) {
+            container.googleTokens.collect { token ->
+                authBusy = true
+                authError = null
+                container.auth.completeOAuth(token)
+                    .onSuccess {
+                        nav.popBackStack(Tab.Live.route, inclusive = false)
+                    }
+                    .onFailure { authError = it.message }
+                authBusy = false
+            }
+        }
+
         val permissionLauncher = rememberLauncherForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions(),
         ) { grants ->
@@ -119,6 +138,7 @@ fun EventViewApp(
                         (context as? Activity)?.requestPermissions(arrayOf(notif), 0)
                     }
                 }
+                container.viewer.stop()
                 HostLiveService.start(context)
                 container.host.start()
             } else {
@@ -130,6 +150,7 @@ fun EventViewApp(
             val needed = listOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
                 .filter { ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED }
             if (needed.isEmpty()) {
+                container.viewer.stop()
                 HostLiveService.start(context)
                 container.host.start()
             } else {
@@ -138,12 +159,31 @@ fun EventViewApp(
         }
 
         fun shareWatch() {
+            val invite = LiveConfig.guestShareText(
+                productName = BuildConfig.PRODUCT_NAME,
+                origin = BuildConfig.WATCH_URL,
+            )
             val intent = Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"
-                putExtra(Intent.EXTRA_SUBJECT, "Watch on ${BuildConfig.PRODUCT_NAME}")
-                putExtra(Intent.EXTRA_TEXT, BuildConfig.WATCH_URL)
+                putExtra(Intent.EXTRA_SUBJECT, LiveConfig.guestShareTitle(BuildConfig.PRODUCT_NAME))
+                putExtra(Intent.EXTRA_TEXT, invite)
             }
-            context.startActivity(Intent.createChooser(intent, "Share guest link"))
+            context.startActivity(Intent.createChooser(intent, "Share EventView invite"))
+        }
+
+        fun startGoogle() {
+            scope.launch {
+                authBusy = true
+                authError = null
+                val ready = container.auth.assertGoogleHandoffReady()
+                if (ready.isFailure) {
+                    authError = ready.exceptionOrNull()?.message
+                    authBusy = false
+                    return@launch
+                }
+                GoogleSignIn.launch(context, BuildConfig.API_BASE_URL, BuildConfig.OAUTH_SCHEME)
+                authBusy = false
+            }
         }
 
         fun go(route: String) {
@@ -158,12 +198,13 @@ fun EventViewApp(
         val route = backStack?.destination?.route
         val hideChrome = inPip || host.live || route in setOf(ROUTE_SIGN_IN, ROUTE_REGISTER, ROUTE_FORGOT)
         val tabs = Tab.entries
+        val reduceMotion = rememberReduceMotion()
 
         Scaffold(
             containerColor = EvBg,
             bottomBar = {
                 if (!hideChrome && !window.useRail) {
-                    NavigationBar(containerColor = EvBg) {
+                    NavigationBar(containerColor = EvSurface, tonalElevation = 0.dp) {
                         tabs.forEach { tab ->
                             NavigationBarItem(
                                 selected = route == tab.route,
@@ -185,7 +226,7 @@ fun EventViewApp(
         ) { padding ->
             Row(Modifier.fillMaxSize()) {
                 if (!hideChrome && window.useRail) {
-                    NavigationRail(containerColor = EvBg, modifier = Modifier.padding(padding)) {
+                    NavigationRail(containerColor = EvSurface, modifier = Modifier.padding(padding)) {
                         tabs.forEach { tab ->
                             NavigationRailItem(
                                 selected = route == tab.route,
@@ -209,6 +250,10 @@ fun EventViewApp(
                     modifier = Modifier
                         .weight(1f)
                         .then(if (hideChrome) Modifier else Modifier.padding(padding)),
+                    enterTransition = { EvMotion.enter(reduceMotion) },
+                    exitTransition = { EvMotion.exit(reduceMotion) },
+                    popEnterTransition = { EvMotion.popEnter(reduceMotion) },
+                    popExitTransition = { EvMotion.popExit(reduceMotion) },
                 ) {
                     composable(Tab.Watch.route) {
                         WatchScreen(
@@ -231,6 +276,7 @@ fun EventViewApp(
                             onStop = {
                                 container.host.stop()
                                 HostLiveService.stop(context)
+                                container.viewer.start()
                             },
                             onFlip = { container.host.flipCamera() },
                             onTorch = { container.host.setTorch(!host.torchOn) },
@@ -276,6 +322,7 @@ fun EventViewApp(
                                     authBusy = false
                                 }
                             },
+                            onGoogle = { startGoogle() },
                             onRegister = { nav.navigate(ROUTE_REGISTER) },
                             onForgot = { nav.navigate(ROUTE_FORGOT) },
                             onWatch = { nav.popBackStack() },
@@ -296,6 +343,7 @@ fun EventViewApp(
                                     authBusy = false
                                 }
                             },
+                            onGoogle = { startGoogle() },
                             onSignIn = { nav.navigate(ROUTE_SIGN_IN) { launchSingleTop = true } },
                         )
                     }

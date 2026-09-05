@@ -21,7 +21,9 @@ class HostLiveService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
-            (application as EventViewApplication).container.host.stop()
+            val container = (application as EventViewApplication).container
+            container.host.stop()
+            container.viewer.start()
             stopSelf()
             return START_NOT_STICKY
         }

@@ -9,6 +9,9 @@ import com.eventview.app.data.hub.HubStore
 import com.eventview.app.data.live.HostLiveController
 import com.eventview.app.data.live.LiveTokenRepository
 import com.eventview.app.data.live.ViewerController
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+
 class AppContainer(app: Application) {
     val sessionStore = SessionStore(app)
     val api = NetworkModule.createApi(
@@ -21,4 +24,11 @@ class AppContainer(app: Application) {
     val hub = HubStore(app)
     val host = HostLiveController(app, tokens, archive)
     val viewer = ViewerController(app, tokens, sessionStore)
+
+    private val googleTokenSink = MutableSharedFlow<String>(replay = 1, extraBufferCapacity = 1)
+    val googleTokens: SharedFlow<String> = googleTokenSink
+
+    fun offerGoogleToken(token: String) {
+        if (token.isNotBlank()) googleTokenSink.tryEmit(token)
+    }
 }

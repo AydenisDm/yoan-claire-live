@@ -1,10 +1,12 @@
 package com.eventview.app.data.auth
 
+import com.eventview.app.BuildConfig
 import com.eventview.app.data.api.AuthSessionDto
 import com.eventview.app.data.api.EmailSignInRequest
 import com.eventview.app.data.api.EmailSignUpRequest
 import com.eventview.app.data.api.EventViewApi
 import com.eventview.app.data.api.NetworkModule
+import com.eventview.core.AndroidAuth
 import com.eventview.core.AuthErrors
 import com.eventview.core.AuthForm
 import com.eventview.core.AuthSession
@@ -14,7 +16,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import retrofit2.Response
+import java.util.concurrent.TimeUnit
 
 class AuthRepository(
     private val api: EventViewApi,
@@ -64,6 +69,63 @@ class AuthRepository(
             )
         }
 
+    /**
+     * Confirm the production `/android-auth` handoff exists before opening
+     * Custom Tabs. A 404 means the site has not shipped the Google return path.
+     */
+    suspend fun assertGoogleHandoffReady(): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
+            val url = AndroidAuth.startUrl(BuildConfig.API_BASE_URL, BuildConfig.OAUTH_SCHEME)
+            val client = OkHttpClient.Builder()
+                .followRedirects(false)
+                .followSslRedirects(false)
+                .connectTimeout(15, TimeUnit.SECONDS)
+                .readTimeout(15, TimeUnit.SECONDS)
+                .build()
+            fun probe(method: String): Int {
+                val request = Request.Builder()
+                    .url(url)
+                    .header("Accept", "text/html,application/json")
+                    .header("Origin", BuildConfig.API_BASE_URL.trimEnd('/'))
+                    .method(method, null)
+                    .build()
+                return client.newCall(request).execute().use { it.code }
+            }
+            var code = probe("HEAD")
+            if (code == 404) code = probe("GET")
+            if (code == 404) {
+                throw AuthException(
+                    "Google sign-in is not on this EventView site yet. Use email and password, or try again after the site updates.",
+                    "handoff_missing",
+                )
+            }
+            if (code >= 500) {
+                throw AuthException(
+                    "Google sign-in could not start. Try email, or try Google again in a moment.",
+                    "AUTH_ERROR",
+                )
+            }
+        }.fold(
+            onSuccess = { Result.success(Unit) },
+            onFailure = { Result.failure(it) },
+        )
+    }
+
+    suspend fun completeOAuth(token: String): Result<AuthSession> = withContext(Dispatchers.IO) {
+        runCatching {
+            val clean = token.trim()
+            if (clean.isEmpty()) {
+                throw AuthException("Google sign-in did not finish.", "oauth")
+            }
+            store.rememberToken(clean)
+            val response = api.getSession()
+            parseSession(response, "Google sign-in did not finish.", existingToken = clean)
+        }.fold(
+            onSuccess = { Result.success(it) },
+            onFailure = { Result.failure(it) },
+        )
+    }
+
     suspend fun refresh(): AuthSession? = withContext(Dispatchers.IO) {
         runCatching {
             val response = api.getSession()
@@ -83,6 +145,7 @@ class AuthRepository(
     private suspend fun parseSession(
         response: Response<AuthSessionDto>,
         fallback: String,
+        existingToken: String? = null,
     ): AuthSession {
         val body = response.body()
         if (!response.isSuccessful) {
@@ -95,7 +158,7 @@ class AuthRepository(
             )
             throw AuthException(message, error?.code ?: body?.code)
         }
-        val session = body?.toSession(existingToken = store.token())
+        val session = body?.toSession(existingToken = existingToken ?: store.token())
             ?: throw AuthException(fallback, body?.code)
         store.save(session)
         return session

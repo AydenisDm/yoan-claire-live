@@ -56,6 +56,14 @@ class CrowdAndErrorsTest {
             "Could not reach the account service. Check your connection and try again.",
             AuthErrors.describe("Failed to fetch", null, "fail"),
         )
+        assertEquals(
+            "Google sign-in is not on this EventView site yet. Use email and password, or try again after the site updates.",
+            AuthErrors.describe("404 android-auth", "handoff_missing", "fail"),
+        )
+        assertEquals(
+            "Google sign-in did not finish. Try again, or use email and password.",
+            AuthErrors.describe("state_not_found", "oauth", "fail"),
+        )
     }
 
     @Test

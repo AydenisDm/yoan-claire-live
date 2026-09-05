@@ -90,7 +90,7 @@ fun WatchScreen(
         return
     }
 
-    val pad = if (window.isTablet) 28.dp else 16.dp
+    val pad = if (window.isTablet) 28.dp else 20.dp
     val chat: @Composable (Modifier) -> Unit = { chatMod ->
         GuestChatPanel(
             lines = state.chats,
@@ -139,7 +139,7 @@ fun WatchScreen(
                 .background(EvBg)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = pad)
-                .padding(top = 12.dp, bottom = 24.dp),
+                .padding(top = 16.dp, bottom = 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
@@ -182,7 +182,7 @@ private fun PlayerStage(
 ) {
     Box(
         modifier
-            .clip(RoundedCornerShape(if (landscape) 12.dp else 16.dp))
+            .clip(RoundedCornerShape(if (landscape) 16.dp else 22.dp))
             .background(EvSurface),
     ) {
         if (state.videoTrack != null && state.status == ViewerStatus.LIVE) {

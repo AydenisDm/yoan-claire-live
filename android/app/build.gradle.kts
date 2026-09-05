@@ -33,8 +33,8 @@ android {
         applicationId = "com.eventview.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 103
+        versionName = "1.0.3"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "API_BASE_URL", "\"$apiBase\"")
@@ -43,6 +43,7 @@ android {
         buildConfigField("String", "ROOM_ID", "\"live\"")
         buildConfigField("String", "HOST_IDENTITY", "\"streamer\"")
         buildConfigField("int", "MAX_VIEWERS", "220")
+        buildConfigField("String", "OAUTH_SCHEME", "\"eventview\"")
     }
 
     buildTypes {
@@ -57,6 +58,7 @@ android {
         debug {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
+            buildConfigField("String", "OAUTH_SCHEME", "\"eventview-debug\"")
         }
     }
 
@@ -97,6 +99,7 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.8.5")
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("androidx.profileinstaller:profileinstaller:1.4.1")
+    implementation("androidx.browser:browser:1.8.0")
 
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
