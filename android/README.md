@@ -70,7 +70,7 @@ Point these at a preview deploy only if that deploy has LiveKit + Postgres confi
 
 1. Live tab → **Sign in** or **Create camera account** (email + password, 8+ characters).
 2. Same account as the website.
-3. **Share guest link** uses the Android share sheet (`https://yoan-claire-live.vercel.app/`).
+3. **Share EventView invite** uses the Android share sheet (`Watch live on EventView` plus `https://yoan-claire-live.vercel.app/`).
 4. **Go live** asks for camera + microphone. Allow both.
 5. Full-screen preview, Flip, Light (back camera), Share, Stop.
 6. A foreground notification keeps the camera up if the screen locks. Disable auto-lock and prefer a hotspot, same as the filming-phone notes on the website.

@@ -24,11 +24,22 @@ class LiveConfigTest {
     }
 
     @Test
-    fun hostMayGoLiveWithMatchingPassword() {
-        assertTrue(LiveConfig.hostMayGoLive(false, "vow", "vow"))
+    fun hostMayGoLiveRejectsPasswordIncludingRetiredVow() {
+        assertFalse(LiveConfig.hostMayGoLive(false, "vow", "vow"))
         assertFalse(LiveConfig.hostMayGoLive(false, "", "vow"))
         assertFalse(LiveConfig.hostMayGoLive(false, "nope", "vow"))
         assertFalse(LiveConfig.hostMayGoLive(false, "vow", ""))
+        assertFalse(LiveConfig.hostMayGoLive(false, "break-glass", "break-glass"))
+    }
+
+    @Test
+    fun guestShareCopySaysEventViewAndKeepsProductionUrl() {
+        val text = LiveConfig.guestShareText()
+        assertEquals("Watch live on EventView", LiveConfig.guestShareTitle())
+        assertEquals("https://yoan-claire-live.vercel.app/", LiveConfig.guestWatchUrl())
+        assertEquals("Watch live on EventView\nhttps://yoan-claire-live.vercel.app/", text)
+        assertTrue(text.startsWith("Watch live on EventView"))
+        assertFalse(LiveConfig.guestShareTitle().contains("Eventstream", ignoreCase = true))
     }
 
     @Test

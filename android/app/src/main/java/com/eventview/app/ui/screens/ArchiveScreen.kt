@@ -59,7 +59,7 @@ fun ArchiveScreen(
                         style = MaterialTheme.typography.bodyMedium,
                         color = LocalEvColors.current.muted,
                     )
-                    EvSecondaryButton("Share guest link", onClick = onShare)
+                    EvSecondaryButton("Share EventView invite", onClick = onShare)
                 }
             }
         } else {
@@ -74,7 +74,7 @@ fun ArchiveScreen(
                                 color = LocalEvColors.current.muted,
                             )
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                EvSecondaryButton("Share link", onClick = onShare)
+                                EvSecondaryButton("Share invite", onClick = onShare)
                                 EvSecondaryButton("Remove", onClick = { onDelete(row.id) })
                             }
                         }

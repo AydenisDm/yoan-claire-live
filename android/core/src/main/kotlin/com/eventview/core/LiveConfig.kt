@@ -10,7 +10,6 @@ object LiveConfig {
     const val PRODUCT_NAME = "EventView"
     const val EVENT_NAME = "EventView"
     const val KICKER = "Live"
-    const val HOST_PASSWORD_FALLBACK = "vow"
     const val CHAT_COOLDOWN_MS = 8_000L
     const val TOKEN_TTL_HINT = "12h"
 
@@ -19,13 +18,31 @@ object LiveConfig {
         return "eventview-${slug.ifEmpty { DEFAULT_ROOM_ID }}"
     }
 
+    fun guestWatchUrl(origin: String = DEFAULT_API_BASE): String {
+        return "${origin.trimEnd('/')}/"
+    }
+
+    fun guestShareTitle(productName: String = PRODUCT_NAME): String {
+        return "Watch live on $productName"
+    }
+
+    fun guestShareText(
+        productName: String = PRODUCT_NAME,
+        origin: String = DEFAULT_API_BASE,
+    ): String {
+        return "${guestShareTitle(productName)}\n${guestWatchUrl(origin)}"
+    }
+
+    /**
+     * Host tokens require a signed-in session. A client password — including
+     * the retired default `vow` — never grants host privileges.
+     */
     fun hostMayGoLive(
         signedIn: Boolean,
-        password: String?,
-        expectedPassword: String,
+        password: String? = null,
+        expectedPassword: String = "",
     ): Boolean {
-        if (signedIn) return true
-        return expectedPassword.isNotEmpty() && password == expectedPassword
+        return signedIn
     }
 
     fun isValidGuestIdentity(id: String): Boolean {
