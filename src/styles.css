@@ -58,7 +58,7 @@
     opacity: 1;
   }
   .ev-skeleton {
-    animation: ev-skeleton 640ms linear infinite;
+    animation: ev-skeleton 400ms linear infinite;
   }
   @keyframes ev-skeleton {
     50% { opacity: 0.55; }
