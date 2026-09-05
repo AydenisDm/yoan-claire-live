@@ -9,6 +9,8 @@ const MISSING_DB =
   /missing_database|DATABASE_URL|cannot save accounts|pglite|required on Vercel/i;
 const DB_DOWN = /database_error|account database is not reachable|ECONNREFUSED|connection refused|timeout/i;
 const SERVER = /internal.?server|AUTH_ERROR|unexpected/i;
+const OAUTH_DENIED = /access_denied|cancelled|user.?denied|oauth.*denied/i;
+const SOCIAL_SETUP = /not set up on this site yet/i;
 
 export function describeAuthError(err: unknown, fallback: string): string {
   const message =
@@ -39,6 +41,12 @@ export function describeAuthError(err: unknown, fallback: string): string {
   }
   if (BAD_CREDENTIALS.test(blob)) {
     return "Email or password did not match.";
+  }
+  if (SOCIAL_SETUP.test(blob)) {
+    return message.trim() || fallback;
+  }
+  if (OAUTH_DENIED.test(blob)) {
+    return "That sign-in was cancelled.";
   }
   if (NETWORK.test(blob)) {
     return "Could not reach the account service. Check your connection and try again.";

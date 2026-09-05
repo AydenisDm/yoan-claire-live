@@ -126,6 +126,7 @@ export function collectTrustedOrigins(source: EnvMap = process.env): string[] {
     "*.vercel.app",
     "*.grok.me",
     "*.grok-sandbox.com",
+    "https://appleid.apple.com",
   ]);
 
   const explicit = read(source, "BETTER_AUTH_URL") ?? read(source, "AUTH_PUBLIC_URL");

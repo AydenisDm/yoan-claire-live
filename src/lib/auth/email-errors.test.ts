@@ -13,6 +13,14 @@ describe("describeAuthError", () => {
     assert.equal(describeAuthError(new Error(""), "Could not sign in."), "Could not sign in.");
   });
 
+  it("keeps social setup copy and maps a cancelled OAuth", () => {
+    assert.match(
+      describeAuthError(new Error("Apple Sign-In is not set up on this site yet. Add APPLE_CLIENT_ID."), "x"),
+      /APPLE_CLIENT_ID/,
+    );
+    assert.match(describeAuthError(new Error("access_denied"), "x"), /cancelled/i);
+  });
+
   it("maps a missing Vercel database to a setup sentence", () => {
     assert.match(
       describeAuthError({ message: "x", code: "missing_database" }, "x"),
