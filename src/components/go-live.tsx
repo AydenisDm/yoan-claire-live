@@ -263,7 +263,7 @@ export function GoLive() {
         <div className="absolute inset-0">{preview}</div>
         <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-3 bg-gradient-to-b from-bg/80 to-transparent p-4 pt-[max(1rem,env(safe-area-inset-top))]">
           <Badge tone="live">
-            <span className="size-1.5 rounded-full bg-live" />
+            <span className="live-dot size-1.5 rounded-full bg-live" />
             Live
           </Badge>
           <Button
@@ -281,7 +281,7 @@ export function GoLive() {
         </div>
         <div
           className={cn(
-            "absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-bg/90 via-bg/70 to-transparent p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-10",
+            "ev-chrome absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-bg/90 via-bg/70 to-transparent p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-10",
             chromeOn ? "opacity-100" : "pointer-events-none opacity-0",
           )}
         >

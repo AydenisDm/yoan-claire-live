@@ -1,5 +1,7 @@
 /** Client-safe auth setup contract. The server fills this at `/api/auth/status`. */
 
+import type { SocialMethods } from "./social-providers";
+
 export type AuthSetupCode =
   | "ready"
   | "missing_database"
@@ -13,7 +15,15 @@ export type AuthSetupStatus = {
   message: string;
   persist: "postgres" | "pglite" | "none";
   emailPassword: boolean;
-  /** Google / X via the Grok broker — only when this host can complete OAuth. */
+  /** True when at least one social method can complete on this host. */
   social: boolean;
+  /** Which backend each EventView social button should use (null = not set up). */
+  socialMethods: SocialMethods;
+  /** Convenience flags for Android / older clients. */
+  providers: {
+    apple: boolean;
+    google: boolean;
+    twitter: boolean;
+  };
   secretStable: boolean;
 };

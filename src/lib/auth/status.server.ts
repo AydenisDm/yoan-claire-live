@@ -1,7 +1,11 @@
 import { dbSource, ensureDbReady, getSql, postgresUrl, vercelRuntime } from "../db";
 import { emailAndPasswordEnabled } from "./email-password";
-import { PREVIEW_CLIENT_ID } from "./preview";
 import { resolveAuthSecret } from "./secret";
+import {
+  anySocialAvailable,
+  resolveSocialMethods,
+  type SocialMethods,
+} from "./social-providers";
 import type { AuthSetupStatus } from "./status";
 
 const env = (key: string): string | undefined => {
@@ -15,11 +19,21 @@ const MISSING_DB =
 const DB_ERROR =
   "The account database is not reachable. Check DATABASE_URL on Vercel, confirm the auth tables exist, and redeploy.";
 
-function socialForHost(request?: Request): boolean {
-  const host = requestHost(request);
-  if (host.endsWith(".grok-sandbox.com")) return true;
-  const clientId = env("GROK_AUTH_CLIENT_ID");
-  return Boolean(clientId && clientId !== PREVIEW_CLIENT_ID);
+function socialForHost(request?: Request): {
+  social: boolean;
+  socialMethods: SocialMethods;
+  providers: AuthSetupStatus["providers"];
+} {
+  const methods = resolveSocialMethods(process.env, requestHost(request));
+  return {
+    social: anySocialAvailable(methods),
+    socialMethods: methods,
+    providers: {
+      apple: Boolean(methods.apple),
+      google: Boolean(methods.google),
+      twitter: Boolean(methods.twitter),
+    },
+  };
 }
 
 function requestHost(request?: Request): string {
@@ -45,6 +59,14 @@ const globalRef = globalThis as typeof globalThis & {
  * Cheap, cache-briefly probe used by `/api/auth/status` and the auth handler.
  * Never throws — a failed probe becomes a setup screen instead of a blank 500.
  */
+function emptySocial(): Pick<AuthSetupStatus, "social" | "socialMethods" | "providers"> {
+  return {
+    social: false,
+    socialMethods: { apple: null, google: null, twitter: null },
+    providers: { apple: false, google: false, twitter: false },
+  };
+}
+
 export async function getAuthSetupStatus(request?: Request): Promise<AuthSetupStatus> {
   const social = socialForHost(request);
   const secret = resolveAuthSecret(process.env, () => "probe");
@@ -57,7 +79,7 @@ export async function getAuthSetupStatus(request?: Request): Promise<AuthSetupSt
       message: "Sign-in is turned off for this deployment.",
       persist: "none",
       emailPassword: false,
-      social: false,
+      ...emptySocial(),
       secretStable: secret.stable,
     };
   }
@@ -69,7 +91,7 @@ export async function getAuthSetupStatus(request?: Request): Promise<AuthSetupSt
       message: MISSING_DB,
       persist: "none",
       emailPassword,
-      social,
+      ...social,
       secretStable: false,
     };
   }
@@ -78,7 +100,7 @@ export async function getAuthSetupStatus(request?: Request): Promise<AuthSetupSt
   if (cached && Date.now() - cached.at < (cached.status.ok ? 15_000 : 5_000)) {
     return {
       ...cached.status,
-      social,
+      ...social,
       emailPassword,
       secretStable: secret.stable,
     };
@@ -95,7 +117,7 @@ export async function getAuthSetupStatus(request?: Request): Promise<AuthSetupSt
       message: "",
       persist: dbSource === "neon" ? "postgres" : "pglite",
       emailPassword,
-      social,
+      ...social,
       secretStable: secret.stable || dbSource === "pglite",
     };
     globalRef.__authSetupCache__ = { at: Date.now(), status };
@@ -112,7 +134,7 @@ export async function getAuthSetupStatus(request?: Request): Promise<AuthSetupSt
       message: missing ? MISSING_DB : DB_ERROR,
       persist: hasDatabaseUrl() ? "postgres" : "none",
       emailPassword,
-      social,
+      ...social,
       secretStable: secret.stable,
     };
     globalRef.__authSetupCache__ = { at: Date.now(), status };

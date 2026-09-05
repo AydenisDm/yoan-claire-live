@@ -68,7 +68,7 @@ function PlayerShell({
         >
           {status === "live" ? (
             <>
-              <span className="size-1.5 rounded-full bg-live" />
+              <span className="live-dot size-1.5 rounded-full bg-live" />
               Live
             </>
           ) : status === "reconnecting" ? (

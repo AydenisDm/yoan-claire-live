@@ -6,7 +6,7 @@ import { parsePlayback } from "@/lib/playback";
 export function WatchView() {
   const playback = parsePlayback(eventConfig.playbackUrl);
   return (
-    <main className="mx-auto flex min-h-dvh max-w-4xl flex-col px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-28 sm:px-6 sm:pt-8">
+    <main className="ev-page mx-auto flex min-h-dvh max-w-4xl flex-col px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-28 sm:px-6 sm:pt-8">
       <header className="mb-6 text-center">
         <p className="mb-3 text-xs tracking-[0.28em] text-subtle uppercase">{eventConfig.kicker}</p>
         <h1 className="font-serif text-4xl leading-tight text-fg sm:text-5xl">

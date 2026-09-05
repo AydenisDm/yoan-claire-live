@@ -39,6 +39,8 @@ import { ensureDbReady, getPglite, postgresUrl, vercelRuntime } from "../db";
 import { emailAndPasswordEnabled } from "./email-password";
 import { GATE_PROVIDER_ID, gateIdentitySessions } from "./gate-session.server";
 import { GROK_PROVIDERS } from "./providers";
+import { APPLE_TRUSTED_ORIGIN } from "./social-providers";
+import { buildOfficialSocialProviders } from "./social-providers.server";
 import { pgliteDialect } from "./pglite-dialect";
 import {
   collectAllowedHosts,
@@ -119,7 +121,10 @@ const baseURL = {
 const trustedOrigins = async (request?: Request) => [
   ...collectTrustedOrigins(),
   ...requestTrustedOrigins(request),
+  APPLE_TRUSTED_ORIGIN,
 ];
+
+const officialSocial = buildOfficialSocialProviders();
 
 const databaseUrl = postgresUrl;
 const authSecret = resolveAuthSecret(process.env, previewAuthSecret);
@@ -197,6 +202,9 @@ export const auth = betterAuth({
       enabled: true,
       trustedProviders: [
         ...GROK_PROVIDERS.map((p) => p.providerId),
+        "apple",
+        "google",
+        "twitter",
         GATE_PROVIDER_ID,
       ],
       // X's synthetic email is never "verified", so don't gate linking on the
@@ -221,6 +229,10 @@ export const auth = betterAuth({
         },
       }
     : {}),
+
+  // Official Apple / Google / X — only when the matching Vercel env vars are set.
+  // The Grok broker (genericOAuth below) remains the sandbox fallback for Google/X.
+  socialProviders: officialSocial,
 
   // `__Host-` prefixed cookies: the browser REFUSES any same-named cookie that
   // carries a `Domain` attribute, so a sibling `*.grok.me` app cannot "toss" a

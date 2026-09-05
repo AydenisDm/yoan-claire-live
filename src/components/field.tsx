@@ -113,7 +113,7 @@ export function PasswordField({
         <button
           id={toggleId}
           type="button"
-          className="absolute inset-y-0 right-0 grid w-11 place-items-center text-muted hover:text-fg"
+          className="absolute inset-y-0 right-0 grid w-11 place-items-center text-muted transition-colors duration-quick ease-snappy hover:text-fg active:scale-[0.96]"
           aria-label={visible ? "Hide password" : "Show password"}
           aria-pressed={visible}
           aria-controls={id}

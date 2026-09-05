@@ -3,10 +3,12 @@ import { useState, type FormEvent } from "react";
 import { AccountScreen } from "@/components/account-screen";
 import { AuthSetupPanel } from "@/components/auth-setup-panel";
 import { FormAlert, PasswordField, TextField } from "@/components/field";
+import { SocialSignIn } from "@/components/social-sign-in";
 import { Button } from "@/components/ui/button";
 import { emailFieldError, passwordFieldError } from "@/lib/auth-form";
-import { GROK_PROVIDERS, authClient, authEnabled, signIn } from "@/lib/auth/client";
+import { authClient, authEnabled, signInSocial } from "@/lib/auth/client";
 import { describeAuthError } from "@/lib/auth/email-errors";
+import type { SocialId } from "@/lib/auth/social-providers";
 import { useAuthSetup } from "@/lib/auth/use-auth-setup";
 
 export const Route = createFileRoute("/login")({ component: Login });
@@ -21,7 +23,6 @@ function Login() {
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
 
   const setupBlocked = unreachable || (status != null && !status.ok);
-  const showSocial = Boolean(status?.ok && status.social);
 
   const afterAuth = async () => {
     try {
@@ -29,14 +30,18 @@ function Login() {
     } catch {
       // session store recovers
     }
-    await navigate({ to: "/host", replace: true });
+    await navigate({ to: "/host", replace: true, viewTransition: true });
   };
 
-  const onSocial = async (providerId: string) => {
+  const onSocial = async (id: SocialId) => {
     setFormError(null);
-    setBusy(providerId);
+    setBusy(id);
     try {
-      await signIn(providerId, { callbackURL: "/host", errorCallbackURL: "/login" });
+      await signInSocial(id, {
+        callbackURL: "/host",
+        errorCallbackURL: "/login",
+        via: status?.socialMethods?.[id] ?? null,
+      });
     } catch (err) {
       setFormError(describeAuthError(err, "Could not continue with that account."));
     } finally {
@@ -75,7 +80,7 @@ function Login() {
   return (
     <AccountScreen
       title="Host sign in"
-      subtitle="Use your camera account to go live. Guests never need an account."
+      subtitle="Use Apple, Google, X, or email. Guests never need an account."
       guestCta
     >
       {!authEnabled ? (
@@ -86,9 +91,11 @@ function Login() {
         <AuthSetupPanel status={status} unreachable={unreachable} />
       ) : (
         <div className="mt-8 space-y-4">
-          <div className="flex items-center gap-3">
+          <SocialSignIn busy={busy} onPick={(id) => void onSocial(id)} />
+          <FormAlert>{formError}</FormAlert>
+          <div className="flex items-center gap-3 py-1">
             <span className="h-px flex-1 bg-border" />
-            <span className="text-xs tracking-wide text-subtle uppercase">Host</span>
+            <span className="text-xs tracking-wide text-subtle uppercase">or email</span>
             <span className="h-px flex-1 bg-border" />
           </div>
           <form onSubmit={(e) => void onEmail(e)} noValidate className="space-y-4">
@@ -119,45 +126,29 @@ function Login() {
               error={fieldErrors.password}
             />
             <p className="text-right text-sm">
-              <Link to="/forgot" className="text-muted underline-offset-4 hover:text-fg hover:underline">
+              <Link
+                to="/forgot"
+                viewTransition
+                className="text-muted underline-offset-4 transition-colors duration-quick ease-snappy hover:text-fg hover:underline"
+              >
                 Forgot password?
               </Link>
             </p>
-            <FormAlert>{formError}</FormAlert>
             <Button type="submit" size="lg" className="w-full" disabled={Boolean(busy)}>
-              {busy === "email" ? "Signing in…" : "Sign in"}
+              {busy === "email" ? "Signing in…" : "Sign in with email"}
             </Button>
           </form>
 
           <p className="pt-1 text-center text-sm text-muted">
             New here?{" "}
-            <Link to="/register" className="text-fg underline-offset-4 hover:underline">
+            <Link
+              to="/register"
+              viewTransition
+              className="text-fg underline-offset-4 transition-colors duration-quick ease-snappy hover:underline"
+            >
               Create a camera account
             </Link>
           </p>
-
-          {showSocial ? (
-            <>
-              <div className="flex items-center gap-3 py-2">
-                <span className="h-px flex-1 bg-border" />
-                <span className="text-xs tracking-wide text-subtle uppercase">or</span>
-                <span className="h-px flex-1 bg-border" />
-              </div>
-              {GROK_PROVIDERS.map((p) => (
-                <Button
-                  key={p.providerId}
-                  type="button"
-                  variant="secondary"
-                  size="lg"
-                  className="w-full"
-                  disabled={Boolean(busy)}
-                  onClick={() => void onSocial(p.providerId)}
-                >
-                  {busy === p.providerId ? "Opening…" : `Continue with ${p.label}`}
-                </Button>
-              ))}
-            </>
-          ) : null}
         </div>
       )}
     </AccountScreen>

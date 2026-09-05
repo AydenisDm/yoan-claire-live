@@ -2,6 +2,12 @@ import { genericOAuthClient } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 import { runPreSignInSignOut, runSignOut } from "../../../scripts/sign-out-plan.mjs";
 import { GROK_PROVIDERS } from "./providers";
+import {
+  brokerIdFor,
+  socialNotConfiguredMessage,
+  type SocialId,
+  type SocialVia,
+} from "./social-providers";
 
 /**
  * Better Auth client for this React SPA (browser-side).
@@ -39,6 +45,7 @@ export const authEnabled = import.meta.env.VITE_AUTH_ENABLED !== "false";
 
 /** The upstream providers to render sign-in buttons for. */
 export { GROK_PROVIDERS };
+export type { SocialId, SocialVia };
 
 // ── Live-preview bearer token ────────────────────────────────────────────────
 // The embedded preview iframe has partitioned cookies, so we keep the session's
@@ -145,6 +152,54 @@ export async function signIn(
 
   const { data, error } = await authClient.signIn.oauth2({
     providerId,
+    callbackURL,
+    errorCallbackURL,
+  });
+  if (error) throw new Error(error.message ?? "Sign-in failed");
+  if (data?.url) window.location.href = data.url;
+}
+
+/**
+ * Apple / Google / X from the login and register screens.
+ *
+ * `via: "official"` uses Better Auth `signIn.social` (this app's own OAuth apps).
+ * `via: "broker"` uses the existing Grok broker Google/X path.
+ * Live preview still goes through the `/auth/popup` plugin so the iframe
+ * does not navigate away.
+ */
+export async function signInSocial(
+  provider: SocialId,
+  opts: {
+    callbackURL?: string;
+    errorCallbackURL?: string;
+    via?: SocialVia | null;
+  } = {},
+): Promise<void> {
+  const via = opts.via ?? null;
+  if (!via) throw new Error(socialNotConfiguredMessage(provider));
+
+  if (via === "broker") {
+    const brokerId = brokerIdFor(provider);
+    if (!brokerId) throw new Error(socialNotConfiguredMessage(provider));
+    return signIn(brokerId, opts);
+  }
+
+  if (inLivePreview()) {
+    return signIn(provider, opts);
+  }
+
+  const callbackURL = opts.callbackURL ?? "/host";
+  const errorCallbackURL = opts.errorCallbackURL ?? "/login";
+
+  await runPreSignInSignOut({
+    livePreview: false,
+    hasBearer: Boolean(getBearerToken()),
+    requestSignOut: () => authClient.signOut(),
+    clearToken: () => setBearerToken(null),
+  });
+
+  const { data, error } = await authClient.signIn.social({
+    provider,
     callbackURL,
     errorCallbackURL,
   });

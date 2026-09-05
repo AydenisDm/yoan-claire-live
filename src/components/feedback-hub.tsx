@@ -34,7 +34,7 @@ export function FeedbackHub() {
   };
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-3xl flex-col gap-6 px-4 pt-[max(2rem,env(safe-area-inset-top))] pb-28 sm:px-6">
+    <main className="ev-page mx-auto flex min-h-dvh max-w-3xl flex-col gap-6 px-4 pt-[max(2rem,env(safe-area-inset-top))] pb-28 sm:px-6">
       <header>
         <p className="text-xs tracking-[0.28em] text-subtle uppercase">{eventConfig.productName}</p>
         <h1 className="font-serif text-3xl text-fg sm:text-4xl">Feedback hub</h1>
