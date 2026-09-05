@@ -80,7 +80,7 @@ function Login() {
   return (
     <AccountScreen
       title="Host sign in"
-      subtitle="Use Apple, Google, X, or email. Guests never need an account."
+      subtitle="Continue with Google or email. Guests never need an account."
       guestCta
     >
       {!authEnabled ? (

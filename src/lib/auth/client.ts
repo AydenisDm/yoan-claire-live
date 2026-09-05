@@ -160,7 +160,7 @@ export async function signIn(
 }
 
 /**
- * Apple / Google / X from the login and register screens.
+ * Official / broker social sign-in. Host screens only call this for Google.
  *
  * `via: "official"` uses Better Auth `signIn.social` (this app's own OAuth apps).
  * `via: "broker"` uses the existing Grok broker Google/X path.

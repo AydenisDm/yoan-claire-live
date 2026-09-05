@@ -1,17 +1,6 @@
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import { SOCIAL_PROVIDERS, type SocialId } from "@/lib/auth/social-providers";
-
-function AppleMark() {
-  return (
-    <svg viewBox="0 0 24 24" className="size-4" aria-hidden>
-      <path
-        fill="currentColor"
-        d="M16.365 1.43c0 1.14-.437 2.2-1.207 3.02-.834.89-2.21 1.57-3.33 1.48-.146-1.09.4-2.26 1.16-3.04.83-.86 2.27-1.5 3.38-1.46zM20.76 17.4c-.55 1.27-.81 1.83-1.52 2.95-1 1.56-2.4 3.5-4.14 3.52-1.54.03-1.94-.99-4.03-.98-2.1.02-2.54 1.01-4.08.98-1.74-.03-3.07-1.77-4.07-3.33-2.8-4.36-3.09-9.48-1.37-12.2 1.22-1.93 3.15-3.06 4.96-3.06 1.85 0 3.01 1.01 4.54 1.01 1.49 0 2.4-1.02 4.54-1.02 1.62 0 3.33.88 4.54 2.4-3.99 2.19-3.34 7.89.63 9.73z"
-      />
-    </svg>
-  );
-}
+import { HOST_SOCIAL_PROVIDERS, type SocialId } from "@/lib/auth/social-providers";
 
 function GoogleMark() {
   return (
@@ -36,21 +25,8 @@ function GoogleMark() {
   );
 }
 
-function XMark() {
-  return (
-    <svg viewBox="0 0 24 24" className="size-4" aria-hidden>
-      <path
-        fill="currentColor"
-        d="M14.23 10.16 21.2 2h-1.65l-6.05 7.08L8.66 2H2.2l7.31 10.71L2.2 22h1.65l6.39-7.48L15.34 22h6.46l-7.57-11.84Zm-2.26 2.65-.74-1.06L4.44 3.3h2.54l4.75 6.84.74 1.06 6.18 8.9h-2.54l-5.14-7.4Z"
-      />
-    </svg>
-  );
-}
-
-const MARK: Record<SocialId, () => ReactNode> = {
-  apple: AppleMark,
+const MARK: Partial<Record<SocialId, () => ReactNode>> = {
   google: GoogleMark,
-  twitter: XMark,
 };
 
 export function SocialSignIn({
@@ -65,7 +41,7 @@ export function SocialSignIn({
       <p className="text-center text-xs tracking-[0.18em] text-subtle uppercase">
         Continue with
       </p>
-      {SOCIAL_PROVIDERS.map((provider) => {
+      {HOST_SOCIAL_PROVIDERS.map((provider) => {
         const Mark = MARK[provider.id];
         const pending = busy === provider.id;
         return (
@@ -78,7 +54,7 @@ export function SocialSignIn({
             disabled={Boolean(busy)}
             onClick={() => onPick(provider.id)}
           >
-            <Mark />
+            {Mark ? <Mark /> : null}
             {pending ? "Opening…" : `Continue with ${provider.label}`}
           </Button>
         );
